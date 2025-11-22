@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Check, X, Copy, RefreshCw, UserPlus, Package } from 'lucide-react';
 import api, { getImageUrl } from '../utils/api';
 import { type Product } from '../types';
+import { PriceInputModal } from '../components/PriceInputModal';
+import { RejectModal } from '../components/RejectModal';
+import { showToast } from '../components/Toast';
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'invites'>('products');
@@ -14,6 +17,11 @@ const AdminPage = () => {
   const [generatedLink, setGeneratedLink] = useState('');
   const [inviteRole, setInviteRole] = useState('USER');
 
+  // Modal states
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
   // --- 1. FETCH PENDING ITEMS ---
   const fetchPending = async () => {
     setLoading(true);
@@ -22,7 +30,7 @@ const AdminPage = () => {
       setPendingProducts(res.data);
     } catch (err) {
       console.error(err);
-      alert('Failed to load pending items');
+      showToast('Failed to load pending items', 'error');
     } finally {
       setLoading(false);
     }
@@ -33,55 +41,53 @@ const AdminPage = () => {
   }, [activeTab]);
 
   // --- 2. APPROVE LOGIC ---
-  const handleApprove = async (product: Product) => {
-    // Simple prompt for MVP. You can replace with a nice Modal later.
-    const newPrice = prompt(`Original Price: $${product.originalPrice}\nEnter Final Price:`, product.originalPrice.toString());
-    if (newPrice === null) return; // Cancelled
+  const handleApproveClick = (product: Product) => {
+    setSelectedProduct(product);
+    setApproveModalOpen(true);
+  };
 
-    // Admin Contact Info (You could also fetch this from a profile endpoint)
-    const adminUser = prompt("Enter your Display Username (without @):", "SuperBroker");
-    if (!adminUser) return;
+  const handleApprove = async (finalPrice: number, adminUsername: string) => {
+    if (!selectedProduct) return;
 
-    try {
-      await api.patch(`/products/${product._id}/approve`, {
-        finalPrice: Number(newPrice),
-        adminUsername: adminUser,
-        adminPhone: '' // Optional
-      });
-      alert('✅ Item Published!');
-      fetchPending(); // Refresh list
-    } catch (err) {
-      alert('Error approving item');
-    }
+    await api.patch(`/products/${selectedProduct._id}/approve`, {
+      finalPrice,
+      adminUsername,
+      adminPhone: '' // Optional
+    });
+    
+    showToast('✅ Item Published!', 'success');
+    fetchPending(); // Refresh list
   };
 
   // --- 3. REJECT LOGIC ---
-  const handleReject = async (id: string) => {
-    const reason = prompt("Enter rejection reason:", "Does not meet requirements.");
-    if (reason === null) return;
+  const handleRejectClick = (product: Product) => {
+    setSelectedProduct(product);
+    setRejectModalOpen(true);
+  };
 
-    try {
-      await api.patch(`/products/${id}/reject`, { reason });
-      alert('❌ Item Rejected');
-      fetchPending();
-    } catch (err) {
-      alert('Error rejecting item');
-    }
+  const handleReject = async (reason: string) => {
+    if (!selectedProduct) return;
+
+    await api.patch(`/products/${selectedProduct._id}/reject`, { reason });
+    showToast('❌ Item Rejected', 'success');
+    fetchPending();
   };
 
   // --- 4. GENERATE INVITE LOGIC ---
   const generateInvite = async () => {
     try {
       const res = await api.post('/admin/invite', { role: inviteRole });
-      setGeneratedLink(res.data.link);
+      // Backend wraps response in { success, message, data: { link, ... } }
+      setGeneratedLink(res.data.data?.link || res.data.link);
+      showToast('Invite link generated!', 'success');
     } catch (err) {
-      alert('Failed to generate invite. Are you an Admin?');
+      showToast('Failed to generate invite. Are you an Admin?', 'error');
     }
   };
 
   const copyLink = () => {
     navigator.clipboard.writeText(generatedLink);
-    alert('Link copied to clipboard!');
+    showToast('Link copied to clipboard!', 'success', 2000);
   };
 
   return (
@@ -125,7 +131,7 @@ const AdminPage = () => {
               
               {/* Show Seller Info (Only visible to Admin) */}
               <p className="text-xs text-gray-400 mb-2">
-                Seller: {(p as any).seller?.username || 'Unknown'} (ID: {(p as any).seller?._id || 'Hidden'})
+                Seller: {p.seller?.username || p.seller?.firstName || 'Unknown'} (ID: {p.seller?._id || 'Hidden'})
               </p>
               
               <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
@@ -141,13 +147,13 @@ const AdminPage = () => {
 
               <div className="flex gap-2">
                 <button 
-                  onClick={() => handleReject(p._id)}
+                  onClick={() => handleRejectClick(p)}
                   className="flex-1 bg-red-100 text-red-700 py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-200"
                 >
                   <X size={18} /> Reject
                 </button>
                 <button 
-                  onClick={() => handleApprove(p)}
+                  onClick={() => handleApproveClick(p)}
                   className="flex-1 bg-green-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-green-700"
                 >
                   <Check size={18} /> Publish
@@ -156,6 +162,30 @@ const AdminPage = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Modals */}
+      {selectedProduct && (
+        <>
+          <PriceInputModal
+            isOpen={approveModalOpen}
+            onClose={() => {
+              setApproveModalOpen(false);
+              setSelectedProduct(null);
+            }}
+            originalPrice={selectedProduct.originalPrice}
+            onSubmit={handleApprove}
+          />
+          <RejectModal
+            isOpen={rejectModalOpen}
+            onClose={() => {
+              setRejectModalOpen(false);
+              setSelectedProduct(null);
+            }}
+            productTitle={selectedProduct.title}
+            onSubmit={handleReject}
+          />
+        </>
       )}
 
       {/* --- CONTENT: INVITES TAB --- */}

@@ -10,17 +10,20 @@ export interface IInvite extends Document {
 }
 
 const InviteSchema: Schema = new Schema({
-  code: { type: String, required: true, unique: true },
+  code: { type: String, required: true, unique: true, index: true },
   roleToAssign: { 
     type: String, 
     enum: Object.values(UserRole), 
     default: UserRole.USER 
   },
-  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  isUsed: { type: Boolean, default: false },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  isUsed: { type: Boolean, default: false, index: true },
   usedBy: { type: Schema.Types.ObjectId, ref: 'User' }
 }, {
   timestamps: true
 });
+
+// Compound index for finding unused invites by code
+InviteSchema.index({ code: 1, isUsed: 1 });
 
 export default mongoose.model<IInvite>('Invite', InviteSchema);

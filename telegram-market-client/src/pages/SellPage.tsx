@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api'; // The bridge we made in Day 1
 import { Camera, DollarSign, Type, FileText } from 'lucide-react';
+import { showToast } from '../components/Toast';
 
 const SellPage = () => {
   const navigate = useNavigate();
@@ -36,8 +37,8 @@ const SellPage = () => {
         originalPrice: Number(formData.originalPrice)
       });
 
-      // Success! Redirect to Feed
-      alert("✅ Item submitted! Waiting for Admin approval.");
+      // Success! Show toast and redirect to Feed
+      showToast('✅ Item submitted! Waiting for Admin approval.', 'success');
       navigate('/');
       
     } catch (err: any) {

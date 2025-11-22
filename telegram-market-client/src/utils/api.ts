@@ -3,10 +3,10 @@ import WebApp from '@twa-dev/sdk';
 
 // ---------------------------------------------------------------------------
 // CONFIGURATION
-// For Day 1-6: We use localhost. 
-// On Day 7: We will change this to the NGROK HTTPS URL.
+// API Base URL from environment variables
+// Default to localhost for development if not set
 // ---------------------------------------------------------------------------
-const BASE_URL = 'https://discharge-photos-cad-offset.trycloudflare.com/api'; // 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://humanities-female-enhanced-include.trycloudflare.com/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -28,7 +28,10 @@ api.interceptors.request.use((config) => {
   if (initData) {
     config.headers.Authorization = initData;
   } else {
-    console.warn("⚠️ No Telegram initData found. Are you opening this in a browser?");
+    // Only warn in development mode
+    if (import.meta.env.DEV) {
+      console.warn("⚠️ No Telegram initData found. Are you opening this in a browser?");
+    }
   }
 
   return config;

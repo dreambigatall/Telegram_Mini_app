@@ -1,34 +1,30 @@
-// import express from 'express';
-// import { submitProduct } from '../controllers/productController';
-// import { protect } from '../middlewares/auth';
-
-// const router = express.Router();
-
-// // Apply 'protect' middleware so only logged-in users can access
-// router.post('/', protect, submitProduct);
-
-// export default router;
-
 import express from 'express';
 import { 
   submitProduct, 
   getPendingProducts, 
   approveProduct, 
-  rejectProduct ,
+  rejectProduct,
   getPublicFeed,
   getProductImage
 } from '../controllers/productController';
 import { protect } from '../middlewares/auth';
 import { authorize } from '../middlewares/roles';
+import { validate } from '../middlewares/validate';
+import { 
+  submitProductSchema, 
+  approveProductSchema, 
+  rejectProductSchema 
+} from '../validations/productValidation';
 import { UserRole } from '../models/User';
 
 const router = express.Router();
 
-// Public/User Routes
-router.post('/', protect, submitProduct);
+// User Routes
+router.post('/', protect, validate(submitProductSchema), submitProduct);
+router.get('/feed', protect, getPublicFeed);
+router.get('/image/:fileId', getProductImage);
 
 // Admin Routes
-// 1. Get Pending List
 router.get(
   '/pending', 
   protect, 
@@ -36,24 +32,20 @@ router.get(
   getPendingProducts
 );
 
-// 2. Approve Item
 router.patch(
   '/:id/approve', 
   protect, 
-  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN), 
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  validate(approveProductSchema),
   approveProduct
 );
 
-// 3. Reject Item
 router.patch(
   '/:id/reject', 
   protect, 
-  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN), 
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+  validate(rejectProductSchema),
   rejectProduct
 );
-
-router.get('/feed', protect, getPublicFeed);
-
-router.get('/image/:fileId', getProductImage);
 
 export default router;

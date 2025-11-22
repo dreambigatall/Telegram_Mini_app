@@ -1,49 +1,38 @@
-import { Request, Response } from 'express';
-import crypto from 'crypto';
-import Invite from '../models/Invite';
+import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '../models/User';
+import { AppError } from '../middlewares/errorHandler';
+import { InviteService } from '../services/inviteService';
+import { ResponseHelper } from '../utils/response';
 
-// @desc    Generate a new invite link
-// @route   POST /api/admin/invite
-// @access  Private (Admin/SuperAdmin)
-export const generateInvite = async (req: Request, res: Response) => {
+export const generateInvite = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { role } = req.body || {}; // 'ADMIN' or 'USER'
+    const { role } = req.body;
 
-    // validation: Only Super Admin can create other Admins
+    // Only Super Admin can create other Admins
     if (role === UserRole.ADMIN && req.user?.role !== UserRole.SUPER_ADMIN) {
-       res.status(403).json({ message: 'Only Super Admin can invite other Admins' });
-       return;
+      const error = new Error('Only Super Admin can invite other Admins') as AppError;
+      error.statusCode = 403;
+      return next(error);
     }
 
-    // 1. Generate a unique code (random 8-char hex string)
-    const code = crypto.randomBytes(4).toString('hex');
+    if (!req.user?._id) {
+      const error = new Error('User not authenticated') as AppError;
+      error.statusCode = 401;
+      return next(error);
+    }
 
-    // 2. Save to DB
-    const invite = await Invite.create({
-      code,
-      roleToAssign: role || UserRole.USER,
-      createdBy: req.user?._id,
-      isUsed: false
-    });
+    const { invite, link } = await InviteService.generateInvite(
+      req.user._id,
+      role || UserRole.USER
+    );
 
-    // 3. Create the Deep Link
-    let botUsername = process.env.BOT_USERNAME || 'YourBotName'; 
-    // Remove @ symbol if present (Telegram deep links don't use @)
-    botUsername = botUsername.replace(/^@/, '');
-    // Note: You should add BOT_USERNAME to your .env file for this to look nice
-    
-    const link = `https://t.me/${botUsername}?start=${code}`;
-
-    res.status(201).json({
-      success: true,
-      inviteCode: code,
+    return ResponseHelper.created(res, {
+      inviteCode: invite.code,
       role: invite.roleToAssign,
-      link: link
-    });
+      link
+    }, 'Invite generated successfully');
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    next(error);
   }
 };

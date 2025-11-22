@@ -1,34 +1,10 @@
-// import { Telegraf } from 'telegraf';
-// import dotenv from 'dotenv';
-
-// dotenv.config();
-
-// if (!process.env.BOT_TOKEN) {
-//   throw new Error("BOT_TOKEN must be provided!");
-// }
-
-// const bot = new Telegraf(process.env.BOT_TOKEN);
-
-// // Basic test command to verify it works
-// bot.command('ping', (ctx) => {
-//   ctx.reply('Pong! Backend is running.');
-// });
-
-// // We will add the invite logic here in Day 4
-// // bot.start((ctx) => ... )
-
-// // Graceful stop
-// process.once('SIGINT', () => bot.stop('SIGINT'));
-// process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-// export default bot;
-
 import { Telegraf } from 'telegraf';
 import dotenv from 'dotenv';
 import Invite from './models/Invite';
 import User, { UserRole } from './models/User';
 import mongoose from 'mongoose';
 import { message } from 'telegraf/filters';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -40,15 +16,15 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Handle /start command
 bot.start(async (ctx) => {
-  try {
-    const telegramId = ctx.from.id.toString();
-    const username = ctx.from.username;
-    const firstName = ctx.from.first_name;
-    
-    // The payload is the text AFTER "start "
-    // Example: https://t.me/bot?start=a1b2c3d4 -> payload = "a1b2c3d4"
-    const code = ctx.payload; 
+  const telegramId = ctx.from.id.toString();
+  const username = ctx.from.username;
+  const firstName = ctx.from.first_name;
+  
+  // The payload is the text AFTER "start "
+  // Example: https://t.me/bot?start=a1b2c3d4 -> payload = "a1b2c3d4"
+  const code = ctx.payload; 
 
+  try {
     // 1. Check if User already exists
     const existingUser = await User.findOne({ telegramId });
     
@@ -72,7 +48,7 @@ bot.start(async (ctx) => {
       return;
     }
 
-    // 4. Create the New User
+    // 4. Create the New User first
     const newUser = await User.create({
       telegramId,
       username,
@@ -81,19 +57,24 @@ bot.start(async (ctx) => {
       isBanned: false
     });
 
-    // 5. Mark Invite as Used
+    // 5. Mark Invite as Used (only after user is created successfully)
     invite.isUsed = true;
     invite.usedBy = newUser._id as mongoose.Types.ObjectId;
     await invite.save();
+    
+    logger.info('User registered via invite', { 
+      telegramId, 
+      username, 
+      role: invite.roleToAssign,
+      inviteCode: code,
+      userId: newUser._id
+    });
 
     // 6. Success Message
     ctx.reply(`✅ Access Granted!\n\nRole: ${newUser.role}\n\nYou can now open the Mini App.`);
-    
-    // Optional: Notify the Admin who created the invite
-    // bot.telegram.sendMessage(invite.createdBy.toString(), `Your invite was used by ${username}`);
 
   } catch (error) {
-    console.error('Bot Error:', error);
+    logger.error('Bot registration error', { error, telegramId: ctx.from.id });
     ctx.reply("An error occurred processing your request.");
   }
 });

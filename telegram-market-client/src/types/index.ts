@@ -10,6 +10,12 @@ export interface Product {
       username: string;
       phoneNumber?: string;
     };
+    seller?: {
+      _id: string;
+      username?: string;
+      firstName?: string;
+      telegramId?: string;
+    };
     createdAt: string;
   }
 

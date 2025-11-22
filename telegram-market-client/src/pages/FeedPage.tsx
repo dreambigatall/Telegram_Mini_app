@@ -3,6 +3,7 @@ import { ShoppingBag, Loader2, Image as ImageIcon } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
 import { type Product } from '../types';
+import { showToast } from '../components/Toast';
 
 const FeedPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,10 +15,30 @@ const FeedPage = () => {
     const fetchFeed = async () => {
       try {
         const res = await api.get('/products/feed');
-        setProducts(res.data.data); // Assuming backend sends { success: true, data: [...] }
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load items.');
+        
+        // Backend uses successWithPagination which returns: { success: true, data: [...], total, page, ... }
+        // Handle different response structures safely
+        let productsData: Product[] = [];
+        
+        if (res.data) {
+          if (res.data.success && Array.isArray(res.data.data)) {
+            // Standard response format
+            productsData = res.data.data;
+          } else if (Array.isArray(res.data.data)) {
+            // Response has data array
+            productsData = res.data.data;
+          } else if (Array.isArray(res.data)) {
+            // Response is directly an array
+            productsData = res.data;
+          }
+        }
+        
+        setProducts(productsData);
+      } catch (err: any) {
+        console.error('Error fetching feed:', err);
+        const errorMessage = err.response?.data?.message || 'Failed to load items.';
+        setError(errorMessage);
+        setProducts([]); // Ensure products is always an array
       } finally {
         setLoading(false);
       }
@@ -25,11 +46,11 @@ const FeedPage = () => {
 
     fetchFeed();
   }, []);
- console.log(products);
+
   // 2. Handle Buy Action (Opens Chat with Admin)
   const handleBuy = (product: Product) => {
     if (!product.adminContact?.username) {
-      alert("Admin contact missing for this item.");
+      showToast('Admin contact missing for this item.', 'error');
       return;
     }
 
@@ -61,11 +82,11 @@ const FeedPage = () => {
       <header className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Fresh Drops ⚡</h1>
         <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-          {products.length} items
+          {products?.length || 0} items
         </span>
       </header>
 
-      {products.length === 0 ? (
+      {(!products || products.length === 0) ? (
         <div className="text-center py-10 text-gray-400">
           <ShoppingBag size={48} className="mx-auto mb-3 opacity-20" />
           <p>No items available right now.</p>
@@ -73,7 +94,7 @@ const FeedPage = () => {
         </div>
       ) : (
         <div className="grid gap-4">
-          {products.map((product) => (
+          {(products || []).map((product) => (
             <div key={product._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               
               {/* Image Placeholder (Since we can't show raw file_ids easily yet) */}

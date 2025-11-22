@@ -25,7 +25,7 @@ export interface IProduct extends Document {
 }
 
 const ProductSchema: Schema = new Schema({
-  seller: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  seller: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   title: { type: String, required: true },
   description: { type: String },
   originalPrice: { type: Number, required: true },
@@ -34,11 +34,12 @@ const ProductSchema: Schema = new Schema({
   status: { 
     type: String, 
     enum: Object.values(ProductStatus), 
-    default: ProductStatus.PENDING 
+    default: ProductStatus.PENDING,
+    index: true // Index for filtering by status
   },
 
   // Fields added by Admin during approval
-  approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
   finalPrice: { type: Number },
   adminContact: {
     username: { type: String },
@@ -47,5 +48,10 @@ const ProductSchema: Schema = new Schema({
 }, {
   timestamps: true
 });
+
+// Compound indexes for common queries
+ProductSchema.index({ status: 1, createdAt: -1 }); // For pending products sorted by date
+ProductSchema.index({ status: 1, updatedAt: -1 }); // For published products feed
+ProductSchema.index({ seller: 1, status: 1 }); // For user's products by status
 
 export default mongoose.model<IProduct>('Product', ProductSchema);
