@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import FeedPage from './pages/FeedPage';
 import SellPage from './pages/SellPage';
 import AdminPage from './pages/AdminPage';
+import UserManagementPage from './pages/UserManagementPage';
 
 // Import Components
 import Navbar from './components/Navbar';
@@ -30,6 +31,7 @@ function AppContent() {
           <Route path="/" element={<FeedPage />} />
           <Route path="/sell" element={<SellPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/users" element={<UserManagementPage />} />
         </Routes>
 
       </div>

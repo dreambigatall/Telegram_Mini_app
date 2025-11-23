@@ -21,7 +21,7 @@ export const PriceInputModal = ({
   onSubmit,
 }: PriceInputModalProps) => {
   const { user } = useAuth();
-  const [finalPrice, setFinalPrice] = useState(originalPrice.toString());
+  const [finalPrice, setFinalPrice] = useState((originalPrice || 0).toString());
   const [adminUsername, setAdminUsername] = useState(user?.username || user?.firstName || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +29,7 @@ export const PriceInputModal = ({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setFinalPrice(originalPrice.toString());
+      setFinalPrice((originalPrice || 0).toString());
       setAdminUsername(user?.username || user?.firstName || '');
       setError('');
     }

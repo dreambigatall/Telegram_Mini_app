@@ -186,3 +186,92 @@ export const getProductImage = async (req: Request, res: Response, next: NextFun
     next(appError);
   }
 };
+
+export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { title, description, finalPrice, adminContact, status } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const error = new Error('Invalid product ID') as AppError;
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!req.user?._id) {
+      const error = new Error('User not authenticated') as AppError;
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    const product = await ProductService.updateProduct(id, {
+      title,
+      description,
+      finalPrice,
+      adminContact,
+      status
+    });
+
+    // Convert to plain object for JSON serialization
+    const plainProduct = product.toObject ? product.toObject() : product;
+
+    return ResponseHelper.success(res, plainProduct, 'Product updated successfully');
+
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError = error as AppError;
+      if (error.message === 'Product not found') {
+        appError.statusCode = 404;
+      } else if (error.message === 'Cannot update a deleted product') {
+        appError.statusCode = 400;
+      }
+      return next(appError);
+    }
+    next(error);
+  }
+};
+
+export const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const error = new Error('Invalid product ID') as AppError;
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!req.user?._id) {
+      const error = new Error('User not authenticated') as AppError;
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    const product = await ProductService.deleteProduct(id);
+
+    // Convert to plain object for JSON serialization
+    const plainProduct = product.toObject ? product.toObject() : product;
+
+    // Optionally notify seller about deletion
+    const seller = product.seller as any;
+    if (seller && seller.telegramId) {
+      await NotificationService.notifySellerProductRejected(
+        seller.telegramId,
+        product.title,
+        'Your product has been deleted by an admin.'
+      );
+    }
+
+    return ResponseHelper.success(res, plainProduct, 'Product deleted successfully');
+
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError = error as AppError;
+      if (error.message === 'Product not found') {
+        appError.statusCode = 404;
+      }
+      return next(appError);
+    }
+    next(error);
+  }
+};

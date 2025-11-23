@@ -6,8 +6,7 @@ import WebApp from '@twa-dev/sdk';
 // API Base URL from environment variables
 // Default to localhost for development if not set
 // ---------------------------------------------------------------------------
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://humanities-female-enhanced-include.trycloudflare.com/api';
-
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://route-betty-sol-disk.trycloudflare.com/api';
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {

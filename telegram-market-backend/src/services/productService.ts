@@ -18,6 +18,17 @@ export interface ApproveProductData {
   approvedBy: Types.ObjectId;
 }
 
+export interface UpdateProductData {
+  title?: string;
+  description?: string;
+  finalPrice?: number;
+  adminContact?: {
+    username?: string;
+    phoneNumber?: string;
+  };
+  status?: ProductStatus;
+}
+
 export class ProductService {
   static async createProduct(data: CreateProductData): Promise<IProduct> {
     const product = await Product.create({
@@ -172,6 +183,83 @@ export class ProductService {
       productId: product._id,
       title: product.title,
       reason: reason || 'Not specified'
+    });
+
+    return product;
+  }
+
+  static async updateProduct(
+    productId: string | Types.ObjectId,
+    data: UpdateProductData
+  ): Promise<IProduct> {
+    const product = await Product.findById(productId).populate('seller');
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    // Only allow updating published products (or allow all statuses except DELETED)
+    if (product.status === ProductStatus.DELETED) {
+      throw new Error('Cannot update a deleted product');
+    }
+
+    // Update fields if provided
+    if (data.title !== undefined) {
+      product.title = data.title;
+    }
+    if (data.description !== undefined) {
+      product.description = data.description;
+    }
+    if (data.finalPrice !== undefined) {
+      product.finalPrice = data.finalPrice;
+    }
+    if (data.adminContact !== undefined) {
+      product.adminContact = {
+        username: data.adminContact.username ?? product.adminContact?.username ?? 'Admin',
+        phoneNumber: data.adminContact.phoneNumber ?? product.adminContact?.phoneNumber ?? ''
+      };
+    }
+    if (data.status !== undefined) {
+      product.status = data.status;
+    }
+
+    await product.save();
+
+    // Clear all product caches
+    cacheService.clearProductCache();
+    cacheService.del(CacheKeys.product(productId.toString()));
+
+    logger.info('Product updated', {
+      productId: product._id,
+      title: product.title,
+      updates: Object.keys(data)
+    });
+
+    return product;
+  }
+
+  static async deleteProduct(
+    productId: string | Types.ObjectId
+  ): Promise<IProduct> {
+    const product = await Product.findById(productId).populate('seller');
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    // Soft delete: set status to DELETED
+    const previousStatus = product.status;
+    product.status = ProductStatus.DELETED;
+    await product.save();
+
+    // Clear all product caches
+    cacheService.clearProductCache();
+    cacheService.del(CacheKeys.product(productId.toString()));
+
+    logger.info('Product deleted (soft delete)', {
+      productId: product._id,
+      title: product.title,
+      previousStatus
     });
 
     return product;

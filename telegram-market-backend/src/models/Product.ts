@@ -4,7 +4,8 @@ export enum ProductStatus {
   PENDING = 'PENDING',       // Waiting for Admin review
   PUBLISHED = 'PUBLISHED',   // Visible to Buyers
   SOLD = 'SOLD',             // No longer available
-  REJECTED = 'REJECTED'      // Admin denied
+  REJECTED = 'REJECTED',     // Admin denied
+  DELETED = 'DELETED'        // Soft deleted by Admin
 }
 
 export interface IProduct extends Document {

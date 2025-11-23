@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProductStatus } from '../models/Product';
 
 export const submitProductSchema = z.object({
   title: z.string()
@@ -40,5 +41,35 @@ export const rejectProductSchema = z.object({
     .optional()
     .nullable()
     .transform(val => val || 'Does not meet guidelines.')
+});
+
+export const updateProductSchema = z.object({
+  title: z.string()
+    .min(3, 'Title must be at least 3 characters')
+    .max(200, 'Title must not exceed 200 characters')
+    .trim()
+    .optional(),
+  description: z.string()
+    .max(2000, 'Description must not exceed 2000 characters')
+    .optional()
+    .nullable(),
+  finalPrice: z.number()
+    .positive('Price must be a positive number')
+    .max(10000000, 'Price is too high')
+    .optional()
+    .nullable(),
+  adminContact: z.object({
+    username: z.string()
+      .max(100, 'Username too long')
+      .trim()
+      .optional()
+      .nullable(),
+    phoneNumber: z.string()
+      .max(20, 'Phone number too long')
+      .optional()
+      .nullable()
+  }).optional(),
+  status: z.nativeEnum(ProductStatus)
+    .optional()
 });
 

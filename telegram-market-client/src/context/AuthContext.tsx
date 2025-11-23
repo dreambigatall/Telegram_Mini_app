@@ -26,6 +26,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   error: string | null;
 }
 
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAdmin: false,
+  isSuperAdmin: false,
   error: null,
 });
 
@@ -140,11 +142,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchCurrentUser();
   }, []);
 
-  // Helper boolean - check if user is admin
+  // Helper booleans - check if user is admin or super admin
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAdmin, error }}>
+    <AuthContext.Provider value={{ user, isLoading, isAdmin, isSuperAdmin, error }}>
       {children}
     </AuthContext.Provider>
   );

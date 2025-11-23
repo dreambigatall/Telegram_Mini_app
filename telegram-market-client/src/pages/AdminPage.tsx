@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Check, X, Copy, RefreshCw, UserPlus, Package } from 'lucide-react';
+import { Check, X, Copy, RefreshCw, UserPlus, Package, Edit, Trash2 } from 'lucide-react';
 import api, { getImageUrl } from '../utils/api';
-import { type Product } from '../types';
+import { type Product, type UpdateProductPayload } from '../types';
 import { PriceInputModal } from '../components/PriceInputModal';
 import { RejectModal } from '../components/RejectModal';
+import { UpdateProductModal } from '../components/UpdateProductModal';
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { showToast } from '../components/Toast';
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'invites'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'published' | 'invites'>('products');
   
   // State for Products
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [publishedProducts, setPublishedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [publishedLoading, setPublishedLoading] = useState(false);
   
   // State for Invites
   const [generatedLink, setGeneratedLink] = useState('');
@@ -20,6 +24,8 @@ const AdminPage = () => {
   // Modal states
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // --- 1. FETCH PENDING ITEMS ---
@@ -36,8 +42,37 @@ const AdminPage = () => {
     }
   };
 
+  // --- FETCH PUBLISHED ITEMS ---
+  const fetchPublished = async () => {
+    setPublishedLoading(true);
+    try {
+      const res = await api.get('/products/feed');
+      // Backend returns: { success: true, data: [...], pagination: {...} }
+      let productsData: Product[] = [];
+      if (res.data) {
+        if (res.data.success && Array.isArray(res.data.data)) {
+          productsData = res.data.data;
+        } else if (Array.isArray(res.data.data)) {
+          productsData = res.data.data;
+        } else if (Array.isArray(res.data)) {
+          productsData = res.data;
+        }
+      }
+      setPublishedProducts(productsData);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to load published items', 'error');
+    } finally {
+      setPublishedLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (activeTab === 'products') fetchPending();
+    if (activeTab === 'products') {
+      fetchPending();
+    } else if (activeTab === 'published') {
+      fetchPublished();
+    }
   }, [activeTab]);
 
   // --- 2. APPROVE LOGIC ---
@@ -90,6 +125,48 @@ const AdminPage = () => {
     showToast('Link copied to clipboard!', 'success', 2000);
   };
 
+  // --- UPDATE PRODUCT LOGIC ---
+  const handleUpdateClick = (product: Product) => {
+    setSelectedProduct(product);
+    setUpdateModalOpen(true);
+  };
+
+  const handleUpdate = async (id: string, data: UpdateProductPayload) => {
+    try {
+      await api.patch(`/products/${id}`, data);
+      showToast('✅ Product updated successfully!', 'success');
+      fetchPublished(); // Refresh published list
+      setUpdateModalOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to update product';
+      showToast(message, 'error');
+      throw err; // Re-throw so modal can handle it
+    }
+  };
+
+  // --- DELETE PRODUCT LOGIC ---
+  const handleDeleteClick = (product: Product) => {
+    setSelectedProduct(product);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      await api.delete(`/products/${selectedProduct._id}`);
+      showToast('✅ Product deleted successfully!', 'success');
+      fetchPublished(); // Refresh published list
+      setDeleteModalOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to delete product';
+      showToast(message, 'error');
+      throw err; // Re-throw so modal can handle it
+    }
+  };
+
   return (
     <div className="p-4 pb-24">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>
@@ -101,6 +178,12 @@ const AdminPage = () => {
           className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 ${activeTab === 'products' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}
         >
           <Package size={18} /> Review Items
+        </button>
+        <button 
+          onClick={() => setActiveTab('published')}
+          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 ${activeTab === 'published' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}
+        >
+          <Package size={18} /> Published
         </button>
         <button 
           onClick={() => setActiveTab('invites')}
@@ -164,27 +247,128 @@ const AdminPage = () => {
         </div>
       )}
 
+      {/* --- CONTENT: PUBLISHED TAB --- */}
+      {activeTab === 'published' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-bold text-gray-700">Published Products ({publishedProducts.length})</h2>
+            <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
+              <RefreshCw size={16} />
+            </button>
+          </div>
+
+          {publishedLoading ? (
+            <p className="text-gray-400">Loading...</p>
+          ) : publishedProducts.length === 0 ? (
+            <p className="text-gray-400">No published items.</p>
+          ) : null}
+
+          {publishedProducts.map(p => (
+            <div key={p._id} className="bg-white p-4 rounded-xl shadow border border-gray-100">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold">{p.title}</h3>
+                <span className="text-green-600 font-bold">${p.finalPrice || p.originalPrice}</span>
+              </div>
+              
+              {/* Status Badge */}
+              <div className="mb-2">
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  p.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' :
+                  p.status === 'SOLD' ? 'bg-gray-100 text-gray-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {p.status}
+                </span>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
+              
+              {/* Admin Contact Info */}
+              {p.adminContact && (
+                <p className="text-xs text-gray-400 mb-2">
+                  Admin: @{p.adminContact.username} {p.adminContact.phoneNumber && `(${p.adminContact.phoneNumber})`}
+                </p>
+              )}
+              
+              {/* Image Preview */}
+              {p.mediaFileId && (
+                <img 
+                  src={getImageUrl(p.mediaFileId)} 
+                  className="w-full h-32 object-cover rounded-lg mb-4"
+                  alt="Preview"
+                />
+              )}
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleUpdateClick(p)}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-blue-700"
+                >
+                  <Edit size={18} /> Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteClick(p)}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-700"
+                >
+                  <Trash2 size={18} /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Modals */}
       {selectedProduct && (
         <>
-          <PriceInputModal
-            isOpen={approveModalOpen}
-            onClose={() => {
-              setApproveModalOpen(false);
-              setSelectedProduct(null);
-            }}
-            originalPrice={selectedProduct.originalPrice}
-            onSubmit={handleApprove}
-          />
-          <RejectModal
-            isOpen={rejectModalOpen}
-            onClose={() => {
-              setRejectModalOpen(false);
-              setSelectedProduct(null);
-            }}
-            productTitle={selectedProduct.title}
-            onSubmit={handleReject}
-          />
+          {/* Only render PriceInputModal for pending products (approval flow) */}
+          {activeTab === 'products' && (
+            <PriceInputModal
+              isOpen={approveModalOpen}
+              onClose={() => {
+                setApproveModalOpen(false);
+                setSelectedProduct(null);
+              }}
+              originalPrice={selectedProduct.originalPrice || 0}
+              onSubmit={handleApprove}
+            />
+          )}
+          {/* Only render RejectModal for pending products */}
+          {activeTab === 'products' && (
+            <RejectModal
+              isOpen={rejectModalOpen}
+              onClose={() => {
+                setRejectModalOpen(false);
+                setSelectedProduct(null);
+              }}
+              productTitle={selectedProduct.title}
+              onSubmit={handleReject}
+            />
+          )}
+          {/* Only render UpdateProductModal and DeleteConfirmModal for published products */}
+          {activeTab === 'published' && (
+            <>
+              <UpdateProductModal
+                isOpen={updateModalOpen}
+                onClose={() => {
+                  setUpdateModalOpen(false);
+                  setSelectedProduct(null);
+                }}
+                product={selectedProduct}
+                onSubmit={handleUpdate}
+              />
+              <DeleteConfirmModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                  setDeleteModalOpen(false);
+                  setSelectedProduct(null);
+                }}
+                title={selectedProduct.title}
+                itemType="Product"
+                onSubmit={handleDelete}
+              />
+            </>
+          )}
         </>
       )}
 

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, PlusCircle, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, PlusCircle, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -7,7 +7,7 @@ const Navbar = () => {
   const location = useLocation();
   
   // Get the user status
-  const { isAdmin, isLoading } = useAuth();
+  const { isAdmin, isSuperAdmin, isLoading } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -16,7 +16,7 @@ const Navbar = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 pb-safe z-50">
-      <div className="flex justify-around items-center h-16">
+      <div className={`flex ${isSuperAdmin ? 'justify-around' : 'justify-around'} items-center h-16`}>
         
         <button 
           onClick={() => navigate('/')}
@@ -40,8 +40,19 @@ const Navbar = () => {
             onClick={() => navigate('/admin')}
             className={`flex flex-col items-center ${isActive('/admin') ? 'text-red-500' : 'text-gray-400'}`}
           >
-            <ShieldCheck size={24} />
+            <ShieldCheck size={22} />
             <span className="text-xs mt-1">Admin</span>
+          </button>
+        )}
+
+        {/* ONLY SHOW THIS IF SUPER ADMIN */}
+        {isSuperAdmin && (
+          <button 
+            onClick={() => navigate('/users')}
+            className={`flex flex-col items-center ${isActive('/users') ? 'text-purple-600' : 'text-gray-400'}`}
+          >
+            <Users size={22} />
+            <span className="text-xs mt-1">Users</span>
           </button>
         )}
 

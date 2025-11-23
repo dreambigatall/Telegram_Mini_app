@@ -32,21 +32,36 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     if (cachedUser) {
       // Cache hit - check if update needed
       if (cachedUser.username !== telegramUser.username || cachedUser.firstName !== telegramUser.first_name) {
-        // Need to update - fetch fresh from DB
-        user = await User.findOne({ telegramId });
+        // Need to update - fetch fresh from DB (exclude deleted users)
+        // Use $ne: true to match both false and undefined (for existing users without the field)
+        user = await User.findOne({ telegramId, isDeleted: { $ne: true } });
         if (user) {
           user.username = telegramUser.username || '';
           user.firstName = telegramUser.first_name || '';
           await user.save();
           cacheService.set(cacheKey, user.toObject(), 120);
+        } else {
+          // User was deleted, clear cache and deny access
+          cacheService.del(cacheKey);
+          const error = new Error('Access Denied. You need an invite.') as AppError;
+          error.statusCode = 403;
+          return next(error);
         }
       } else {
         // Use cached user (convert to Mongoose-like object for req.user)
+        // Check if cached user is deleted (only deny if explicitly true)
+        if (cachedUser.isDeleted === true) {
+          cacheService.del(cacheKey);
+          const error = new Error('Access Denied. You need an invite.') as AppError;
+          error.statusCode = 403;
+          return next(error);
+        }
         user = cachedUser;
       }
     } else {
-      // Cache miss - query database
-      user = await User.findOne({ telegramId });
+      // Cache miss - query database (exclude deleted users)
+      // Use $ne: true to match both false and undefined (for existing users without the field)
+      user = await User.findOne({ telegramId, isDeleted: { $ne: true } });
       
       if (!user) {
         const error = new Error('Access Denied. You need an invite.') as AppError;
