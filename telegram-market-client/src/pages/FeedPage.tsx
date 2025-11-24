@@ -4,18 +4,29 @@ import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
 import { type Product } from '../types';
 import { showToast } from '../components/Toast';
+import { Pagination } from '../components/Pagination';
 
 const FeedPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit] = useState(45);
+  const [total, setTotal] = useState(0);
 
   // 1. Fetch the Feed
   const fetchFeed = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/products/feed');
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      const res = await api.get(`/products/feed?${params}`);
       
       // Backend uses successWithPagination which returns: { success: true, data: [...], total, page, ... }
       // Handle different response structures safely
@@ -25,12 +36,16 @@ const FeedPage = () => {
         if (res.data.success && Array.isArray(res.data.data)) {
           // Standard response format
           productsData = res.data.data;
+          // Extract total from pagination response
+          setTotal(res.data.total || 0);
         } else if (Array.isArray(res.data.data)) {
           // Response has data array
           productsData = res.data.data;
+          setTotal(res.data.total || productsData.length);
         } else if (Array.isArray(res.data)) {
-          // Response is directly an array
+          // Response is directly an array (fallback)
           productsData = res.data;
+          setTotal(productsData.length);
         }
       }
       
@@ -40,6 +55,7 @@ const FeedPage = () => {
       const errorMessage = err.response?.data?.message || 'Failed to load items.';
       setError(errorMessage);
       setProducts([]); // Ensure products is always an array
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -47,7 +63,7 @@ const FeedPage = () => {
 
   useEffect(() => {
     fetchFeed();
-  }, []);
+  }, [page, limit]);
 
   // 2. Handle Buy Action (Opens Chat with Admin)
   const handleBuy = (product: Product) => {
@@ -165,6 +181,17 @@ const FeedPage = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && !error && products.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalPages={Math.ceil(total / limit)}
+          totalItems={total}
+          itemsPerPage={limit}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

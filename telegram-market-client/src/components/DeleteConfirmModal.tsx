@@ -48,8 +48,40 @@ export const DeleteConfirmModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={`Delete ${itemType}`} size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title={`Delete ${itemType}`} 
+      size="md"
+      footer={
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="delete-confirm-form"
+            disabled={loading}
+            className="flex-1 bg-red-600 text-white font-medium py-2.5 rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Deleting...
+              </>
+            ) : (
+              `Delete ${itemType}`
+            )}
+          </button>
+        </div>
+      }
+    >
+      <form id="delete-confirm-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Warning Message */}
         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
           <div className="flex items-start gap-3">
@@ -74,32 +106,6 @@ export const DeleteConfirmModal = ({
             {error}
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={loading}
-            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-red-600 text-white font-medium py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Deleting...
-              </>
-            ) : (
-              `Delete ${itemType}`
-            )}
-          </button>
-        </div>
       </form>
     </Modal>
   );

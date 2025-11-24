@@ -7,13 +7,15 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  footer?: ReactNode;
 }
 
 /**
  * Modal Component
  * Reusable modal dialog for forms and confirmations
+ * Optimized for Telegram Mini App with sticky footer support
  */
-export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) => {
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -52,12 +54,12 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       aria-labelledby={title ? 'modal-title' : undefined}
     >
       <div
-        className={`bg-white rounded-xl shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto`}
+        className={`bg-white rounded-xl shadow-xl w-full ${sizeClasses[size]} max-h-[calc(100vh-80px)] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header - Fixed */}
         {title && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
             <h2 id="modal-title" className="text-lg font-bold text-gray-800">
               {title}
             </h2>
@@ -71,8 +73,17 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4">{children}</div>
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 pb-20">
+          {children}
+        </div>
+
+        {/* Footer - Sticky */}
+        {footer && (
+          <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4 rounded-b-xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

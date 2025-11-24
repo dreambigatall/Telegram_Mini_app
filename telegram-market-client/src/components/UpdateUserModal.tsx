@@ -75,8 +75,40 @@ export const UpdateUserModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Update User" size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title="Update User" 
+      size="md"
+      footer={
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="update-user-form"
+            disabled={loading}
+            className="flex-1 bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Updating...
+              </>
+            ) : (
+              'Update User'
+            )}
+          </button>
+        </div>
+      }
+    >
+      <form id="update-user-form" onSubmit={handleSubmit} className="space-y-4">
         {/* User ID Display */}
         {user && (
           <div className="bg-blue-50 p-2 rounded-lg border border-blue-200">
@@ -177,32 +209,6 @@ export const UpdateUserModal = ({
             {error}
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={loading}
-            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Updating...
-              </>
-            ) : (
-              'Update User'
-            )}
-          </button>
-        </div>
       </form>
     </Modal>
   );

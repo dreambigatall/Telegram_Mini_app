@@ -64,8 +64,40 @@ export const PriceInputModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Approve Product" size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Approve Product" 
+      size="md"
+      footer={
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="approve-product-form"
+            disabled={loading}
+            className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Publishing...
+              </>
+            ) : (
+              'Publish Item'
+            )}
+          </button>
+        </div>
+      }
+    >
+      <form id="approve-product-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Original Price Display */}
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
           <p className="text-xs text-blue-600 font-medium mb-1">Original Price</p>
@@ -119,32 +151,6 @@ export const PriceInputModal = ({
             {error}
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-green-600 text-white font-medium py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Publishing...
-              </>
-            ) : (
-              'Publish Item'
-            )}
-          </button>
-        </div>
       </form>
     </Modal>
   );

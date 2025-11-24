@@ -7,6 +7,7 @@ import { RejectModal } from '../components/RejectModal';
 import { UpdateProductModal } from '../components/UpdateProductModal';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { showToast } from '../components/Toast';
+import { Pagination } from '../components/Pagination';
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'published' | 'invites'>('products');
@@ -16,6 +17,13 @@ const AdminPage = () => {
   const [publishedProducts, setPublishedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [publishedLoading, setPublishedLoading] = useState(false);
+  
+  // Pagination state
+  const [pendingPage, setPendingPage] = useState(1);
+  const [publishedPage, setPublishedPage] = useState(1);
+  const [limit] = useState(45);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [publishedTotal, setPublishedTotal] = useState(0);
   
   // State for Invites
   const [generatedLink, setGeneratedLink] = useState('');
@@ -32,11 +40,31 @@ const AdminPage = () => {
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/products/pending');
-      setPendingProducts(res.data);
+      const params = new URLSearchParams({
+        page: pendingPage.toString(),
+        limit: limit.toString(),
+      });
+      const res = await api.get(`/products/pending?${params}`);
+      
+      // Handle response - check if it has pagination structure
+      if (res.data) {
+        if (res.data.success && Array.isArray(res.data.data)) {
+          setPendingProducts(res.data.data);
+          setPendingTotal(res.data.total || res.data.data.length);
+        } else if (Array.isArray(res.data.data)) {
+          setPendingProducts(res.data.data);
+          setPendingTotal(res.data.total || res.data.data.length);
+        } else if (Array.isArray(res.data)) {
+          // Fallback: direct array
+          setPendingProducts(res.data);
+          setPendingTotal(res.data.length);
+        }
+      }
     } catch (err) {
       console.error(err);
       showToast('Failed to load pending items', 'error');
+      setPendingProducts([]);
+      setPendingTotal(0);
     } finally {
       setLoading(false);
     }
@@ -46,22 +74,32 @@ const AdminPage = () => {
   const fetchPublished = async () => {
     setPublishedLoading(true);
     try {
-      const res = await api.get('/products/feed');
-      // Backend returns: { success: true, data: [...], pagination: {...} }
+      const params = new URLSearchParams({
+        page: publishedPage.toString(),
+        limit: limit.toString(),
+      });
+      const res = await api.get(`/products/feed?${params}`);
+      
+      // Backend returns: { success: true, data: [...], total, page, ... }
       let productsData: Product[] = [];
       if (res.data) {
         if (res.data.success && Array.isArray(res.data.data)) {
           productsData = res.data.data;
+          setPublishedTotal(res.data.total || 0);
         } else if (Array.isArray(res.data.data)) {
           productsData = res.data.data;
+          setPublishedTotal(res.data.total || productsData.length);
         } else if (Array.isArray(res.data)) {
           productsData = res.data;
+          setPublishedTotal(productsData.length);
         }
       }
       setPublishedProducts(productsData);
     } catch (err) {
       console.error(err);
       showToast('Failed to load published items', 'error');
+      setPublishedProducts([]);
+      setPublishedTotal(0);
     } finally {
       setPublishedLoading(false);
     }
@@ -72,6 +110,15 @@ const AdminPage = () => {
       fetchPending();
     } else if (activeTab === 'published') {
       fetchPublished();
+    }
+  }, [activeTab, pendingPage, publishedPage, limit]);
+
+  // Reset to page 1 when switching tabs
+  useEffect(() => {
+    if (activeTab === 'products') {
+      setPendingPage(1);
+    } else if (activeTab === 'published') {
+      setPublishedPage(1);
     }
   }, [activeTab]);
 
@@ -244,6 +291,17 @@ const AdminPage = () => {
               </div>
             </div>
           ))}
+
+          {/* Pagination for Pending Products */}
+          {!loading && pendingProducts.length > 0 && (
+            <Pagination
+              currentPage={pendingPage}
+              totalPages={Math.ceil(pendingTotal / limit)}
+              totalItems={pendingTotal}
+              itemsPerPage={limit}
+              onPageChange={setPendingPage}
+            />
+          )}
         </div>
       )}
 
@@ -251,7 +309,7 @@ const AdminPage = () => {
       {activeTab === 'published' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="font-bold text-gray-700">Published Products ({publishedProducts.length})</h2>
+            <h2 className="font-bold text-gray-700">Published Products ({publishedTotal})</h2>
             <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
               <RefreshCw size={16} />
             </button>
@@ -315,6 +373,88 @@ const AdminPage = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* --- CONTENT: PUBLISHED TAB --- */}
+      {activeTab === 'published' && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-bold text-gray-700">Published Products ({publishedTotal})</h2>
+            <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
+              <RefreshCw size={16} />
+            </button>
+          </div>
+
+          {publishedLoading ? (
+            <p className="text-gray-400">Loading...</p>
+          ) : publishedProducts.length === 0 ? (
+            <p className="text-gray-400">No published items.</p>
+          ) : null}
+
+          {publishedProducts.map(p => (
+            <div key={p._id} className="bg-white p-4 rounded-xl shadow border border-gray-100">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold">{p.title}</h3>
+                <span className="text-green-600 font-bold">${p.finalPrice || p.originalPrice}</span>
+              </div>
+              
+              {/* Status Badge */}
+              <div className="mb-2">
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  p.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' :
+                  p.status === 'SOLD' ? 'bg-gray-100 text-gray-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {p.status}
+                </span>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
+              
+              {/* Admin Contact Info */}
+              {p.adminContact && (
+                <p className="text-xs text-gray-400 mb-2">
+                  Admin: @{p.adminContact.username} {p.adminContact.phoneNumber && `(${p.adminContact.phoneNumber})`}
+                </p>
+              )}
+              
+              {/* Image Preview */}
+              {p.mediaFileId && (
+                <img 
+                  src={getImageUrl(p.mediaFileId)} 
+                  className="w-full h-32 object-cover rounded-lg mb-4"
+                  alt="Preview"
+                />
+              )}
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleUpdateClick(p)}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-blue-700"
+                >
+                  <Edit size={18} /> Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteClick(p)}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-700"
+                >
+                  <Trash2 size={18} /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Pagination for Published Products */}
+          {!publishedLoading && publishedProducts.length > 0 && (
+            <Pagination
+              currentPage={publishedPage}
+              totalPages={Math.ceil(publishedTotal / limit)}
+              totalItems={publishedTotal}
+              itemsPerPage={limit}
+              onPageChange={setPublishedPage}
+            />
+          )}
         </div>
       )}
 

@@ -131,9 +131,12 @@ export const ToastContainer = () => {
 
   if (toasts.length === 0) return null;
 
+  // Limit to max 3 visible toasts
+  const visibleToasts = toasts.slice(0, 3);
+
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col items-end">
-      {toasts.map((toast) => (
+    <div className="fixed top-16 right-4 z-50 flex flex-col items-end gap-2" style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+      {visibleToasts.map((toast) => (
         <ToastNotification key={toast.id} toast={toast} onClose={handleClose} />
       ))}
     </div>

@@ -15,7 +15,7 @@ const UserManagementPage = () => {
   
   // Pagination
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(45);
   const [total, setTotal] = useState(0);
   
   // Filters
