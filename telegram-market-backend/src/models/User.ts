@@ -4,6 +4,8 @@ export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   USER = 'USER', // Acts as both Buyer and Seller
+  SELLER = 'SELLER', // Can only sell (submit products)
+  BUYER = 'BUYER' // Can only buy (view feed)
 }
 
 export interface IUser extends Document {

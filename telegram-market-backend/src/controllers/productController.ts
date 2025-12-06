@@ -9,7 +9,7 @@ import { ResponseHelper } from '../utils/response';
 
 export const submitProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, description, originalPrice, mediaFileId } = req.body;
+    const { title, description, originalPrice, mediaFileId, madeIn, expirationDate, expirationDateRaw } = req.body;
 
     if (!req.user?._id) {
       const error = new Error('User not authenticated') as AppError;
@@ -22,7 +22,10 @@ export const submitProduct = async (req: Request, res: Response, next: NextFunct
       title,
       description,
       originalPrice,
-      mediaFileId
+      mediaFileId,
+      madeIn,
+      expirationDate,
+      expirationDateRaw: expirationDateRaw || null
     });
 
     // Notify Admin
@@ -190,7 +193,7 @@ export const getProductImage = async (req: Request, res: Response, next: NextFun
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { title, description, finalPrice, adminContact, status } = req.body;
+    const { title, description, finalPrice, adminContact, status, madeIn, expirationDate, expirationDateRaw, availableTimeValue, availableTimeUnit } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       const error = new Error('Invalid product ID') as AppError;
@@ -204,13 +207,21 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       return next(error);
     }
 
-    const product = await ProductService.updateProduct(id, {
-      title,
-      description,
-      finalPrice,
-      adminContact,
-      status
-    });
+    // Build update object - only include fields that are explicitly provided
+    const updateData: any = {};
+    
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (finalPrice !== undefined) updateData.finalPrice = finalPrice;
+    if (adminContact !== undefined) updateData.adminContact = adminContact;
+    if (status !== undefined) updateData.status = status;
+    if (madeIn !== undefined) updateData.madeIn = madeIn;
+    if (expirationDate !== undefined) updateData.expirationDate = expirationDate;
+    if (expirationDateRaw !== undefined) updateData.expirationDateRaw = expirationDateRaw;
+    if (availableTimeValue !== undefined) updateData.availableTimeValue = availableTimeValue;
+    if (availableTimeUnit !== undefined) updateData.availableTimeUnit = availableTimeUnit;
+
+    const product = await ProductService.updateProduct(id, updateData);
 
     // Convert to plain object for JSON serialization
     const plainProduct = product.toObject ? product.toObject() : product;

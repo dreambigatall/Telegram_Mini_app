@@ -6,6 +6,44 @@ import { cacheService, CacheKeys } from '../utils/cache';
 
 export const protect = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // MOCK AUTHENTICATION FOR POSTMAN TESTING
+    // Set ENABLE_MOCK_AUTH=true in .env to enable
+    if (process.env.ENABLE_MOCK_AUTH === 'true') {
+      const mockTelegramId = req.headers['x-mock-telegram-id'] as string || '123456789';
+      const mockRole = (req.headers['x-mock-role'] as string || 'USER').toUpperCase();
+      
+      // Find or create mock user
+      let user = await User.findOne({ telegramId: mockTelegramId, isDeleted: { $ne: true } });
+      
+      if (!user) {
+        // Create mock user if doesn't exist
+        user = await User.create({
+          telegramId: mockTelegramId,
+          username: 'postman_test_user',
+          firstName: 'Postman Test',
+          role: mockRole as any,
+          isBanned: false,
+          isDeleted: false
+        });
+      } else {
+        // Update role if header is provided
+        if (mockRole && ['USER', 'ADMIN', 'SUPER_ADMIN', 'SELLER', 'BUYER'].includes(mockRole)) {
+          user.role = mockRole as any;
+          await user.save();
+        }
+      }
+
+      if (user.isBanned) {
+        const error = new Error('You are banned.') as AppError;
+        error.statusCode = 403;
+        return next(error);
+      }
+
+      req.user = user;
+      return next();
+    }
+
+    // NORMAL TELEGRAM AUTHENTICATION
     const initData = req.headers.authorization;
 
     if (!initData) {

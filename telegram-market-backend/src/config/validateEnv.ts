@@ -5,17 +5,17 @@ dotenv.config();
 
 interface EnvConfig {
   MONGO_URI: string;
-  BOT_TOKEN: string;
+  BOT_TOKEN?: string; // Optional when ENABLE_MOCK_AUTH is true
   PORT: string;
   CORS_ORIGIN?: string;
   SUPER_ADMIN_ID?: string;
   BOT_USERNAME?: string;
   NODE_ENV?: string;
+  ENABLE_MOCK_AUTH?: string; // For Postman testing
 }
 
 const requiredEnvVars: (keyof EnvConfig)[] = [
   'MONGO_URI',
-  'BOT_TOKEN',
   'PORT'
 ];
 
@@ -33,6 +33,12 @@ export const validateEnv = (): void => {
     throw new Error(
       `Missing required environment variables: ${missing.join(', ')}`
     );
+  }
+
+  // BOT_TOKEN is required unless mock auth is enabled
+  if (process.env.ENABLE_MOCK_AUTH !== 'true' && !process.env.BOT_TOKEN) {
+    logger.error('BOT_TOKEN is required when ENABLE_MOCK_AUTH is not enabled');
+    throw new Error('BOT_TOKEN is required when ENABLE_MOCK_AUTH is not enabled');
   }
 
   // Validate format of some variables

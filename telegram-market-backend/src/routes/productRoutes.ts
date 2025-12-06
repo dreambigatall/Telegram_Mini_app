@@ -23,8 +23,8 @@ import { UserRole } from '../models/User';
 const router = express.Router();
 
 // User Routes
-router.post('/', protect, validate(submitProductSchema), submitProduct);
-router.get('/feed', protect, getPublicFeed);
+router.post('/', protect, authorize(UserRole.SELLER, UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN), validate(submitProductSchema), submitProduct);
+router.get('/feed', protect, authorize(UserRole.BUYER, UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getPublicFeed);
 router.get('/image/:fileId', getProductImage);
 
 // Admin Routes

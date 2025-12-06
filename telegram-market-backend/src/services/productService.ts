@@ -1,4 +1,4 @@
-import Product, { ProductStatus, IProduct } from '../models/Product';
+import Product, { ProductStatus, IProduct, AvailableTimeUnit } from '../models/Product';
 import { Types } from 'mongoose';
 import logger from '../utils/logger';
 import { cacheService, CacheKeys } from '../utils/cache';
@@ -9,6 +9,9 @@ export interface CreateProductData {
   description?: string;
   originalPrice: number;
   mediaFileId?: string;
+  madeIn?: string;
+  expirationDate?: Date;
+  expirationDateRaw?: string;
 }
 
 export interface ApproveProductData {
@@ -27,6 +30,11 @@ export interface UpdateProductData {
     phoneNumber?: string;
   };
   status?: ProductStatus;
+  madeIn?: string;
+  expirationDate?: Date;
+  expirationDateRaw?: string;
+  availableTimeValue?: number;
+  availableTimeUnit?: AvailableTimeUnit;
 }
 
 export class ProductService {
@@ -37,6 +45,9 @@ export class ProductService {
       description: data.description,
       originalPrice: data.originalPrice,
       mediaFileId: data.mediaFileId,
+      madeIn: data.madeIn,
+      expirationDate: data.expirationDate,
+      expirationDateRaw: data.expirationDateRaw,
       status: ProductStatus.PENDING
     });
 
@@ -221,6 +232,21 @@ export class ProductService {
     }
     if (data.status !== undefined) {
       product.status = data.status;
+    }
+    if (data.madeIn !== undefined) {
+      product.madeIn = data.madeIn;
+    }
+    if (data.expirationDate !== undefined) {
+      product.expirationDate = data.expirationDate;
+    }
+    if (data.expirationDateRaw !== undefined) {
+      product.expirationDateRaw = data.expirationDateRaw;
+    }
+    if (data.availableTimeValue !== undefined) {
+      product.availableTimeValue = data.availableTimeValue;
+    }
+    if (data.availableTimeUnit !== undefined) {
+      product.availableTimeUnit = data.availableTimeUnit;
     }
 
     await product.save();
