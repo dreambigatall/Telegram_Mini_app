@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
-import { Edit, DollarSign, User, Loader2, FileText } from 'lucide-react';
-import {type  Product,type UpdateProductPayload } from '../types';
+import { Edit, DollarSign, User, Loader2, FileText, Globe, Calendar, Clock } from 'lucide-react';
+import { type Product, type UpdateProductPayload, type AvailableTimeUnit } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface UpdateProductModalProps {
@@ -14,6 +14,7 @@ interface UpdateProductModalProps {
 /**
  * Update Product Modal
  * Used by admin to update published products
+ * Includes new fields: madeIn, expirationDate, availableTimeValue, availableTimeUnit
  */
 export const UpdateProductModal = ({
   isOpen,
@@ -23,12 +24,22 @@ export const UpdateProductModal = ({
 }: UpdateProductModalProps) => {
   const { user } = useAuth();
   
+  // Basic product fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [finalPrice, setFinalPrice] = useState('');
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [status, setStatus] = useState<Product['status']>('PUBLISHED');
+  
+  // NEW: Product info fields
+  const [madeIn, setMadeIn] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
+  
+  // NEW: Admin-only availability fields
+  const [availableTimeValue, setAvailableTimeValue] = useState('');
+  const [availableTimeUnit, setAvailableTimeUnit] = useState<AvailableTimeUnit | ''>('');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,6 +52,13 @@ export const UpdateProductModal = ({
       setAdminUsername(product.adminContact?.username || user?.username || user?.firstName || '');
       setAdminPhone(product.adminContact?.phoneNumber || '');
       setStatus(product.status || 'PUBLISHED');
+      
+      // NEW: Set new field values
+      setMadeIn(product.madeIn || '');
+      setExpirationDate(product.expirationDateRaw || ''); // Use raw format for editing
+      setAvailableTimeValue(product.availableTimeValue?.toString() || '');
+      setAvailableTimeUnit(product.availableTimeUnit || '');
+      
       setError('');
     }
   }, [isOpen, product, user]);
@@ -75,6 +93,14 @@ export const UpdateProductModal = ({
       return;
     }
 
+    // Validate availableTimeValue if provided
+    const timeValue = availableTimeValue ? parseInt(availableTimeValue) : null;
+    if (timeValue !== null && (isNaN(timeValue) || timeValue < 1 || timeValue > 1000)) {
+      setError('Available time value must be between 1 and 1000');
+      setLoading(false);
+      return;
+    }
+
     try {
       const updateData: UpdateProductPayload = {
         title: title.trim(),
@@ -85,6 +111,12 @@ export const UpdateProductModal = ({
           phoneNumber: adminPhone.trim() || undefined,
         },
         status,
+        // NEW: Include new fields
+        madeIn: madeIn.trim() || undefined,
+        expirationDate: expirationDate.trim() || undefined,
+        availableTimeValue: timeValue,
+        // If value is provided but no unit, backend defaults to 'day'
+        availableTimeUnit: timeValue && availableTimeUnit ? availableTimeUnit : (timeValue ? 'day' : null),
       };
 
       await onSubmit(product._id, updateData);
@@ -102,6 +134,12 @@ export const UpdateProductModal = ({
       setError('');
       onClose();
     }
+  };
+
+  // Clear available time fields
+  const handleClearAvailableTime = () => {
+    setAvailableTimeValue('');
+    setAvailableTimeUnit('');
   };
 
   return (
@@ -178,7 +216,7 @@ export const UpdateProductModal = ({
           <div className="relative">
             <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
             <textarea
-              rows={4}
+              rows={3}
               maxLength={2000}
               placeholder="Product description..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
@@ -208,6 +246,99 @@ export const UpdateProductModal = ({
               disabled={loading}
             />
           </div>
+        </div>
+
+        {/* NEW: Made In / Country Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Made In / Country
+          </label>
+          <div className="relative">
+            <Globe className="absolute left-3 top-3 text-gray-400" size={18} />
+            <input
+              type="text"
+              maxLength={100}
+              placeholder="e.g. USA, Japan, Germany"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              value={madeIn}
+              onChange={(e) => setMadeIn(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        {/* NEW: Expiration Date Input */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Expiration Date
+          </label>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-3 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="e.g. 2026, Nov/2026, 2026/01/15"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              value={expirationDate}
+              onChange={(e) => setExpirationDate(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Formats: YYYY, YYYY/MM, Month/YYYY, YYYY/MM/DD
+          </p>
+        </div>
+
+        {/* NEW: Available Time Section (Admin Only) */}
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center justify-between mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-purple-800">
+              <Clock size={16} />
+              Available Time (Admin Only)
+            </label>
+            {(availableTimeValue || availableTimeUnit) && (
+              <button
+                type="button"
+                onClick={handleClearAvailableTime}
+                className="text-xs text-purple-600 hover:text-purple-800 underline"
+                disabled={loading}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                placeholder="e.g. 3"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white"
+                value={availableTimeValue}
+                onChange={(e) => setAvailableTimeValue(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-xs text-purple-600 mt-1">Value (1-1000)</p>
+            </div>
+            <div>
+              <select
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white"
+                value={availableTimeUnit}
+                onChange={(e) => setAvailableTimeUnit(e.target.value as AvailableTimeUnit | '')}
+                disabled={loading}
+              >
+                <option value="">Select unit (defaults to day)</option>
+                <option value="hour">Hour(s)</option>
+                <option value="day">Day(s)</option>
+                <option value="weeks">Week(s)</option>
+                <option value="month">Month(s)</option>
+              </select>
+              <p className="text-xs text-purple-600 mt-1">Time unit</p>
+            </div>
+          </div>
+          <p className="text-xs text-purple-600 mt-2">
+            ℹ️ If only number is entered, it defaults to "days"
+          </p>
         </div>
 
         {/* Admin Contact Section */}
@@ -272,4 +403,3 @@ export const UpdateProductModal = ({
     </Modal>
   );
 };
-

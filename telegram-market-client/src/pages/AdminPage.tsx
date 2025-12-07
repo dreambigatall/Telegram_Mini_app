@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Check, X, Copy, RefreshCw, UserPlus, Package, Edit, Trash2 } from 'lucide-react';
+import { Check, X, Copy, RefreshCw, UserPlus, Package, Edit, Trash2, Globe, Calendar, Clock } from 'lucide-react';
 import api, { getImageUrl } from '../utils/api';
-import { type Product, type UpdateProductPayload } from '../types';
+import { type Product, type UpdateProductPayload, formatAvailableTime } from '../types';
 import { PriceInputModal } from '../components/PriceInputModal';
 import { RejectModal } from '../components/RejectModal';
 import { UpdateProductModal } from '../components/UpdateProductModal';
@@ -214,6 +214,30 @@ const AdminPage = () => {
     }
   };
 
+  // Reusable Product Info Tags Component
+  const ProductInfoTags = ({ product }: { product: Product }) => (
+    <div className="flex flex-wrap gap-1.5 mb-2">
+      {product.madeIn && (
+        <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+          <Globe size={10} />
+          {product.madeIn}
+        </span>
+      )}
+      {product.expirationDateRaw && (
+        <span className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+          <Calendar size={10} />
+          {product.expirationDateRaw}
+        </span>
+      )}
+      {product.availableTimeValue && product.availableTimeUnit && (
+        <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+          <Clock size={10} />
+          {formatAvailableTime(product.availableTimeValue, product.availableTimeUnit)}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-4 pb-24">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>
@@ -222,19 +246,19 @@ const AdminPage = () => {
       <div className="flex space-x-2 mb-6">
         <button 
           onClick={() => setActiveTab('products')}
-          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 ${activeTab === 'products' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}
+          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 transition ${activeTab === 'products' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}
         >
-          <Package size={18} /> Review Items
+          <Package size={18} /> Review
         </button>
         <button 
           onClick={() => setActiveTab('published')}
-          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 ${activeTab === 'published' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}
+          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 transition ${activeTab === 'published' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}
         >
           <Package size={18} /> Published
         </button>
         <button 
           onClick={() => setActiveTab('invites')}
-          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 ${activeTab === 'invites' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border'}`}
+          className={`flex-1 py-2 rounded-lg font-medium flex justify-center items-center gap-2 transition ${activeTab === 'invites' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-gray-50'}`}
         >
           <UserPlus size={18} /> Invites
         </button>
@@ -244,13 +268,17 @@ const AdminPage = () => {
       {activeTab === 'products' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="font-bold text-gray-700">Pending Approvals ({pendingProducts.length})</h2>
-            <button onClick={fetchPending} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
+            <h2 className="font-bold text-gray-700">Pending Approvals ({pendingTotal})</h2>
+            <button onClick={fetchPending} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition">
               <RefreshCw size={16} />
             </button>
           </div>
 
-          {loading ? <p>Loading...</p> : pendingProducts.length === 0 ? <p className="text-gray-400">No pending items.</p> : null}
+          {loading ? (
+            <p className="text-gray-400">Loading...</p>
+          ) : pendingProducts.length === 0 ? (
+            <p className="text-gray-400">No pending items.</p>
+          ) : null}
 
           {pendingProducts.map(p => (
             <div key={p._id} className="bg-white p-4 rounded-xl shadow border border-gray-100">
@@ -263,6 +291,9 @@ const AdminPage = () => {
               <p className="text-xs text-gray-400 mb-2">
                 Seller: {p.seller?.username || p.seller?.firstName || 'Unknown'} (ID: {p.seller?._id || 'Hidden'})
               </p>
+
+              {/* NEW: Product Info Tags */}
+              <ProductInfoTags product={p} />
               
               <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
               
@@ -278,13 +309,13 @@ const AdminPage = () => {
               <div className="flex gap-2">
                 <button 
                   onClick={() => handleRejectClick(p)}
-                  className="flex-1 bg-red-100 text-red-700 py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-200"
+                  className="flex-1 bg-red-100 text-red-700 py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-200 transition"
                 >
                   <X size={18} /> Reject
                 </button>
                 <button 
                   onClick={() => handleApproveClick(p)}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-green-700"
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-green-700 transition"
                 >
                   <Check size={18} /> Publish
                 </button>
@@ -310,7 +341,7 @@ const AdminPage = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center mb-2">
             <h2 className="font-bold text-gray-700">Published Products ({publishedTotal})</h2>
-            <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
+            <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition">
               <RefreshCw size={16} />
             </button>
           </div>
@@ -338,6 +369,9 @@ const AdminPage = () => {
                   {p.status}
                 </span>
               </div>
+
+              {/* NEW: Product Info Tags */}
+              <ProductInfoTags product={p} />
               
               <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
               
@@ -360,84 +394,13 @@ const AdminPage = () => {
               <div className="flex gap-2">
                 <button 
                   onClick={() => handleUpdateClick(p)}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-blue-700 transition"
                 >
                   <Edit size={18} /> Edit
                 </button>
                 <button 
                   onClick={() => handleDeleteClick(p)}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-700"
-                >
-                  <Trash2 size={18} /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* --- CONTENT: PUBLISHED TAB --- */}
-      {activeTab === 'published' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="font-bold text-gray-700">Published Products ({publishedTotal})</h2>
-            <button onClick={fetchPublished} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300">
-              <RefreshCw size={16} />
-            </button>
-          </div>
-
-          {publishedLoading ? (
-            <p className="text-gray-400">Loading...</p>
-          ) : publishedProducts.length === 0 ? (
-            <p className="text-gray-400">No published items.</p>
-          ) : null}
-
-          {publishedProducts.map(p => (
-            <div key={p._id} className="bg-white p-4 rounded-xl shadow border border-gray-100">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold">{p.title}</h3>
-                <span className="text-green-600 font-bold">${p.finalPrice || p.originalPrice}</span>
-              </div>
-              
-              {/* Status Badge */}
-              <div className="mb-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  p.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' :
-                  p.status === 'SOLD' ? 'bg-gray-100 text-gray-700' :
-                  'bg-blue-100 text-blue-700'
-                }`}>
-                  {p.status}
-                </span>
-              </div>
-              
-              <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded">{p.description}</p>
-              
-              {/* Admin Contact Info */}
-              {p.adminContact && (
-                <p className="text-xs text-gray-400 mb-2">
-                  Admin: @{p.adminContact.username} {p.adminContact.phoneNumber && `(${p.adminContact.phoneNumber})`}
-                </p>
-              )}
-              
-              {/* Image Preview */}
-              {p.mediaFileId && (
-                <img 
-                  src={getImageUrl(p.mediaFileId)} 
-                  className="w-full h-32 object-cover rounded-lg mb-4"
-                  alt="Preview"
-                />
-              )}
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => handleUpdateClick(p)}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-blue-700"
-                >
-                  <Edit size={18} /> Edit
-                </button>
-                <button 
-                  onClick={() => handleDeleteClick(p)}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-700"
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg flex justify-center items-center gap-2 hover:bg-red-700 transition"
                 >
                   <Trash2 size={18} /> Delete
                 </button>
@@ -522,16 +485,24 @@ const AdminPage = () => {
             <select 
               value={inviteRole} 
               onChange={(e) => setInviteRole(e.target.value)}
-              className="w-full p-2 border rounded-lg bg-gray-50"
+              className="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             >
-              <option value="USER">Buyer / Seller (Standard)</option>
+              <option value="USER">User (Can Buy & Sell)</option>
+              <option value="BUYER">Buyer Only (Can only view & buy)</option>
+              <option value="SELLER">Seller Only (Can only submit products)</option>
               <option value="ADMIN">Administrator</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {inviteRole === 'USER' && '✓ Full access: Can view marketplace and submit products'}
+              {inviteRole === 'BUYER' && '👁️ View only: Can browse and buy, cannot sell'}
+              {inviteRole === 'SELLER' && '📦 Sell only: Can submit products, cannot browse marketplace'}
+              {inviteRole === 'ADMIN' && '⚡ Admin access: Full control + admin dashboard'}
+            </p>
           </div>
 
           <button 
             onClick={generateInvite}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold mb-6 hover:bg-blue-700"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold mb-6 hover:bg-blue-700 transition"
           >
             Generate Link
           </button>
@@ -545,7 +516,7 @@ const AdminPage = () => {
                   value={generatedLink} 
                   className="flex-1 text-sm bg-white p-2 border rounded text-gray-600"
                 />
-                <button onClick={copyLink} className="p-2 bg-green-200 text-green-800 rounded hover:bg-green-300">
+                <button onClick={copyLink} className="p-2 bg-green-200 text-green-800 rounded hover:bg-green-300 transition">
                   <Copy size={18} />
                 </button>
               </div>

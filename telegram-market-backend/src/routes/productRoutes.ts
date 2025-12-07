@@ -6,6 +6,7 @@ import {
   rejectProduct,
   getPublicFeed,
   getProductImage,
+  getProductById,
   updateProduct,
   deleteProduct
 } from '../controllers/productController';
@@ -27,13 +28,16 @@ router.post('/', protect, authorize(UserRole.SELLER, UserRole.USER, UserRole.ADM
 router.get('/feed', protect, authorize(UserRole.BUYER, UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getPublicFeed);
 router.get('/image/:fileId', getProductImage);
 
-// Admin Routes
+// Admin Routes - Must be before /:id route
 router.get(
   '/pending', 
   protect, 
   authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN), 
   getPendingProducts
 );
+
+// Dynamic routes - Must be last
+router.get('/:id', protect, authorize(UserRole.BUYER, UserRole.USER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getProductById);
 
 router.patch(
   '/:id/approve', 

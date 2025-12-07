@@ -163,6 +163,53 @@ export const getPublicFeed = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+export const getProductById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      const error = new Error('Invalid product ID') as AppError;
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const product = await ProductService.findById(id);
+
+    if (!product) {
+      const error = new Error('Product not found') as AppError;
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // For non-admin users, only show published products
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+    if (!isAdmin && product.status !== 'PUBLISHED') {
+      const error = new Error('Product not found') as AppError;
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Convert to plain object and hide seller info for public
+    const plainProduct: any = product.toObject ? product.toObject() : product;
+    
+    // Remove seller information from response (privacy) and ensure mediaFileId is included
+    const { seller, ...responseData } = plainProduct;
+    responseData.mediaFileId = product.mediaFileId || null;
+
+    return ResponseHelper.success(res, responseData, 'Product retrieved successfully');
+
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError = error as AppError;
+      if (error.message === 'Product not found') {
+        appError.statusCode = 404;
+      }
+      return next(appError);
+    }
+    next(error);
+  }
+};
+
 export const getProductImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { fileId } = req.params;
