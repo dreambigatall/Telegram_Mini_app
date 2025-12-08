@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertCircle, Globe, Calendar, Clock, User, Phone, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, Globe, Calendar, Clock, User, Phone, MessageCircle, Image as ImageIcon } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
-import { type Product, formatAvailableTime } from '../types';
+import { type Product, formatAvailableTime, getProductImageIds } from '../types';
 import { showToast } from '../components/Toast';
 
 const ProductDetailsPage = () => {
@@ -13,7 +13,11 @@ const ProductDetailsPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [imageError, setImageError] = useState(false);
+  
+  // Image carousel state
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Fetch product details
   const fetchProduct = async () => {
@@ -53,6 +57,35 @@ const ProductDetailsPage = () => {
     fetchProduct();
   }, [id]);
 
+  // Handle carousel scroll to update active dot
+  const handleCarouselScroll = () => {
+    if (!carouselRef.current) return;
+    
+    const scrollLeft = carouselRef.current.scrollLeft;
+    const width = carouselRef.current.clientWidth;
+    const newIndex = Math.round(scrollLeft / width);
+    
+    if (newIndex !== activeImageIndex) {
+      setActiveImageIndex(newIndex);
+    }
+  };
+
+  // Handle dot click to scroll to image
+  const handleDotClick = (index: number) => {
+    if (!carouselRef.current) return;
+    
+    const width = carouselRef.current.clientWidth;
+    carouselRef.current.scrollTo({
+      left: width * index,
+      behavior: 'smooth'
+    });
+  };
+
+  // Handle image error
+  const handleImageError = (index: number) => {
+    setFailedImages(prev => new Set(prev).add(index));
+  };
+
   // Handle Buy Action (Opens Chat with Admin)
   const handleBuy = () => {
     if (!product?.adminContact?.username) {
@@ -72,11 +105,13 @@ const ProductDetailsPage = () => {
     navigate(-1);
   };
 
+  // Get image URLs
+  const imageIds = product ? getProductImageIds(product) : [];
+
   // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        {/* Header Skeleton */}
         <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
@@ -85,7 +120,6 @@ const ProductDetailsPage = () => {
           </div>
         </header>
         
-        {/* Content Skeleton */}
         <div className="animate-pulse">
           <div className="h-80 bg-gray-200"></div>
           <div className="bg-white p-4 space-y-3">
@@ -149,43 +183,76 @@ const ProductDetailsPage = () => {
       </header>
 
       <main>
-        {/* Product Image Section */}
-        <div className="relative">
-          <div 
-            className="h-80 bg-gray-200 bg-cover bg-center flex items-end justify-center"
-            style={{
-              backgroundImage: product.mediaFileId && !imageError 
-                ? `linear-gradient(0deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%), url(${getImageUrl(product.mediaFileId)})`
-                : undefined
-            }}
-          >
-            {(!product.mediaFileId || imageError) && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-2 bg-gray-300 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">📦</span>
+        {/* Image Carousel Section */}
+        <div className="relative bg-gray-200">
+          {imageIds.length > 0 ? (
+            <>
+              {/* Horizontal Scrolling Image Carousel */}
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {imageIds.map((fileId, index) => (
+                  <div 
+                    key={fileId} 
+                    className="w-full h-80 flex-shrink-0 snap-center bg-gray-200"
+                  >
+                    {!failedImages.has(index) ? (
+                      <img
+                        src={getImageUrl(fileId)}
+                        alt={`${product.title} - Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={() => handleImageError(index)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="text-center">
+                          <ImageIcon size={48} className="mx-auto mb-2 opacity-50" />
+                          <span className="text-sm">Failed to load</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm">No Image</span>
-                </div>
+                ))}
               </div>
-            )}
-            
-            {/* Image dots indicator (ready for multi-image) */}
-            <div className="flex justify-center gap-2 p-5 relative z-10">
-              <div className="w-2 h-2 rounded-full bg-white"></div>
-              <div className="w-2 h-2 rounded-full bg-white/50"></div>
-              <div className="w-2 h-2 rounded-full bg-white/50"></div>
+              
+              {/* Dot Indicators */}
+              {imageIds.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                  {imageIds.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleDotClick(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === activeImageIndex 
+                          ? 'bg-white w-4' 
+                          : 'bg-white/50 hover:bg-white/70'
+                      }`}
+                      aria-label={`Go to image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* Image Counter */}
+              {imageIds.length > 1 && (
+                <div className="absolute top-4 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                  {activeImageIndex + 1} / {imageIds.length}
+                </div>
+              )}
+            </>
+          ) : (
+            /* No Image Placeholder */
+            <div className="h-80 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-2 bg-gray-300 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">📦</span>
+                </div>
+                <span className="text-sm">No Image</span>
+              </div>
             </div>
-          </div>
-          
-          {/* Hidden img tag to detect load errors */}
-          {product.mediaFileId && (
-            <img 
-              src={getImageUrl(product.mediaFileId)} 
-              alt="" 
-              className="hidden"
-              onError={() => setImageError(true)}
-            />
           )}
         </div>
 
@@ -317,4 +384,3 @@ const ProductDetailsPage = () => {
 };
 
 export default ProductDetailsPage;
-

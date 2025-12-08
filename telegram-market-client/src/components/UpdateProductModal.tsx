@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Modal } from './Modal';
-import { Edit, DollarSign, User, Loader2, FileText, Globe, Calendar, Clock } from 'lucide-react';
-import { type Product, type UpdateProductPayload, type AvailableTimeUnit } from '../types';
+import { Edit, DollarSign, User, Loader2, FileText, Globe, Calendar, Clock, X } from 'lucide-react';
+import { type Product, type UpdateProductPayload, type AvailableTimeUnit, getProductImageIds } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { getImageUrl } from '../utils/api';
+import { ImageUploader } from './ImageUploader';
 
 interface UpdateProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onSubmit: (id: string, data: UpdateProductPayload) => Promise<void>;
+  onSubmit: (id: string, data: UpdateProductPayload, newImages?: File[]) => Promise<void>;
 }
 
 /**
  * Update Product Modal
  * Used by admin to update published products
- * Includes new fields: madeIn, expirationDate, availableTimeValue, availableTimeUnit
+ * Includes image management and all product fields
  */
 export const UpdateProductModal = ({
   isOpen,
@@ -32,13 +34,18 @@ export const UpdateProductModal = ({
   const [adminPhone, setAdminPhone] = useState('');
   const [status, setStatus] = useState<Product['status']>('PUBLISHED');
   
-  // NEW: Product info fields
+  // Product info fields
   const [madeIn, setMadeIn] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   
-  // NEW: Admin-only availability fields
+  // Admin-only availability fields
   const [availableTimeValue, setAvailableTimeValue] = useState('');
   const [availableTimeUnit, setAvailableTimeUnit] = useState<AvailableTimeUnit | ''>('');
+  
+  // Image fields
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [imageError, setImageError] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -53,19 +60,25 @@ export const UpdateProductModal = ({
       setAdminPhone(product.adminContact?.phoneNumber || '');
       setStatus(product.status || 'PUBLISHED');
       
-      // NEW: Set new field values
+      // Set product info fields
       setMadeIn(product.madeIn || '');
-      setExpirationDate(product.expirationDateRaw || ''); // Use raw format for editing
+      setExpirationDate(product.expirationDateRaw || '');
       setAvailableTimeValue(product.availableTimeValue?.toString() || '');
       setAvailableTimeUnit(product.availableTimeUnit || '');
       
+      // Set existing images
+      setExistingImages(getProductImageIds(product));
+      setNewImages([]);
+      
       setError('');
+      setImageError('');
     }
   }, [isOpen, product, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setImageError('');
     setLoading(true);
 
     if (!product) {
@@ -111,18 +124,16 @@ export const UpdateProductModal = ({
           phoneNumber: adminPhone.trim() || undefined,
         },
         status,
-        // NEW: Include new fields
         madeIn: madeIn.trim() || undefined,
         expirationDate: expirationDate.trim() || undefined,
         availableTimeValue: timeValue,
-        // If value is provided but no unit, backend defaults to 'day'
         availableTimeUnit: timeValue && availableTimeUnit ? availableTimeUnit : (timeValue ? 'day' : null),
       };
 
-      await onSubmit(product._id, updateData);
+      await onSubmit(product._id, updateData, newImages.length > 0 ? newImages : undefined);
       onClose();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to update product';
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update product';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -132,6 +143,7 @@ export const UpdateProductModal = ({
   const handleClose = () => {
     if (!loading) {
       setError('');
+      setImageError('');
       onClose();
     }
   };
@@ -141,6 +153,20 @@ export const UpdateProductModal = ({
     setAvailableTimeValue('');
     setAvailableTimeUnit('');
   };
+
+  // Handle new images change
+  const handleNewImagesChange = (images: File[]) => {
+    // Limit total images (existing + new) to 4
+    const totalAllowed = 4 - existingImages.length;
+    if (images.length > totalAllowed) {
+      setImageError(`You can only add ${totalAllowed} more image(s)`);
+      return;
+    }
+    setNewImages(images);
+    setImageError('');
+  };
+
+  const maxNewImages = Math.max(0, 4 - existingImages.length);
 
   return (
     <Modal 
@@ -189,6 +215,45 @@ export const UpdateProductModal = ({
           </div>
         )}
 
+        {/* Existing Images Display */}
+        {existingImages.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Current Images ({existingImages.length})
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {existingImages.map((fileId, index) => (
+                <div key={fileId} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={getImageUrl(fileId)}
+                    alt={`Product image ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-1 left-1 w-5 h-5 bg-black/60 text-white text-xs rounded-full flex items-center justify-center">
+                    {index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add New Images */}
+        {maxNewImages > 0 && (
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <ImageUploader
+              images={newImages}
+              onImagesChange={handleNewImagesChange}
+              maxImages={maxNewImages}
+              error={imageError}
+              disabled={loading}
+            />
+            <p className="text-xs text-green-600 mt-2">
+              ℹ️ New images will be added to existing ones (max 4 total)
+            </p>
+          </div>
+        )}
+
         {/* Title Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -204,7 +269,6 @@ export const UpdateProductModal = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={loading}
-            autoFocus
           />
         </div>
 
@@ -248,7 +312,7 @@ export const UpdateProductModal = ({
           </div>
         </div>
 
-        {/* NEW: Made In / Country Input */}
+        {/* Made In / Country Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Made In / Country
@@ -267,7 +331,7 @@ export const UpdateProductModal = ({
           </div>
         </div>
 
-        {/* NEW: Expiration Date Input */}
+        {/* Expiration Date Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Expiration Date
@@ -288,7 +352,7 @@ export const UpdateProductModal = ({
           </p>
         </div>
 
-        {/* NEW: Available Time Section (Admin Only) */}
+        {/* Available Time Section (Admin Only) */}
         <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
           <div className="flex items-center justify-between mb-2">
             <label className="flex items-center gap-2 text-sm font-medium text-purple-800">

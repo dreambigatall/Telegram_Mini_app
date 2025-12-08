@@ -20,8 +20,8 @@ import { ToastContainer } from './components/Toast';
 function ConditionalNavbar() {
   const location = useLocation();
   
-  // Hide navbar on product details page (it has its own footer)
-  const hideNavbarRoutes = ['/product'];
+  // Hide navbar on product details page and sell form page (they have their own footers)
+  const hideNavbarRoutes = ['/product', '/sell/form'];
   const shouldHideNavbar = hideNavbarRoutes.some(route => location.pathname.startsWith(route));
   
   if (shouldHideNavbar) return null;
@@ -45,6 +45,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<FeedPage />} />
           <Route path="/sell" element={<SellPage />} />
+          <Route path="/sell/form" element={<SellPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/users" element={<UserManagementPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />

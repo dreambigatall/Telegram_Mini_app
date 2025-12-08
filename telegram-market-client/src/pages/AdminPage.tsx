@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, X, Copy, RefreshCw, UserPlus, Package, Edit, Trash2, Globe, Calendar, Clock } from 'lucide-react';
+import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
 import { type Product, type UpdateProductPayload, formatAvailableTime } from '../types';
 import { PriceInputModal } from '../components/PriceInputModal';
@@ -178,15 +179,56 @@ const AdminPage = () => {
     setUpdateModalOpen(true);
   };
 
-  const handleUpdate = async (id: string, data: UpdateProductPayload) => {
+  const handleUpdate = async (id: string, data: UpdateProductPayload, newImages?: File[]) => {
     try {
-      await api.patch(`/products/${id}`, data);
+      // If new images are provided, use FormData; otherwise use JSON
+      if (newImages && newImages.length > 0) {
+        const formData = new FormData();
+        
+        // Add text fields
+        if (data.title) formData.append('title', data.title);
+        if (data.description) formData.append('description', data.description);
+        if (data.finalPrice !== undefined) formData.append('finalPrice', data.finalPrice.toString());
+        if (data.madeIn) formData.append('madeIn', data.madeIn);
+        if (data.expirationDate) formData.append('expirationDate', data.expirationDate);
+        if (data.availableTimeValue !== undefined && data.availableTimeValue !== null) {
+          formData.append('availableTimeValue', data.availableTimeValue.toString());
+        }
+        if (data.availableTimeUnit) formData.append('availableTimeUnit', data.availableTimeUnit);
+        if (data.adminContact?.username) formData.append('adminContact[username]', data.adminContact.username);
+        if (data.adminContact?.phoneNumber) formData.append('adminContact[phoneNumber]', data.adminContact.phoneNumber);
+        if (data.status) formData.append('status', data.status);
+        
+        // Add new image files
+        newImages.forEach((file) => {
+          formData.append('images', file);
+        });
+
+        // Use fetch for FormData (axios doesn't handle multipart well)
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://route-betty-sol-disk.trycloudflare.com/api';
+        const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': WebApp.initData || '',
+          },
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || result.error || 'Failed to update product');
+        }
+      } else {
+        // No new images, use regular JSON API call
+        await api.patch(`/products/${id}`, data);
+      }
+      
       showToast('✅ Product updated successfully!', 'success');
       fetchPublished(); // Refresh published list
       setUpdateModalOpen(false);
       setSelectedProduct(null);
     } catch (err: any) {
-      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to update product';
+      const message = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update product';
       showToast(message, 'error');
       throw err; // Re-throw so modal can handle it
     }

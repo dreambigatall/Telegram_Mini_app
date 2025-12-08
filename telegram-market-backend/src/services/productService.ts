@@ -8,7 +8,8 @@ export interface CreateProductData {
   title: string;
   description?: string;
   originalPrice: number;
-  mediaFileId?: string;
+  mediaFileId?: string; // Legacy: kept for backward compatibility
+  images?: string[]; // Array of Telegram file_ids (max 4)
   madeIn?: string;
   expirationDate?: Date;
   expirationDateRaw?: string;
@@ -35,16 +36,24 @@ export interface UpdateProductData {
   expirationDateRaw?: string;
   availableTimeValue?: number;
   availableTimeUnit?: AvailableTimeUnit;
+  images?: string[]; // Array of Telegram file_ids (max 4)
 }
 
 export class ProductService {
   static async createProduct(data: CreateProductData): Promise<IProduct> {
+    // Handle backward compatibility: if mediaFileId exists but no images, convert it
+    let images = data.images || [];
+    if (data.mediaFileId && images.length === 0) {
+      images = [data.mediaFileId];
+    }
+
     const product = await Product.create({
       seller: data.seller,
       title: data.title,
       description: data.description,
       originalPrice: data.originalPrice,
-      mediaFileId: data.mediaFileId,
+      mediaFileId: data.mediaFileId, // Keep for backward compatibility
+      images: images.length > 0 ? images : undefined,
       madeIn: data.madeIn,
       expirationDate: data.expirationDate,
       expirationDateRaw: data.expirationDateRaw,
@@ -116,12 +125,24 @@ export class ProductService {
       Product.countDocuments({ status: ProductStatus.PUBLISHED })
     ]);
 
-    // Products are already plain objects from lean(), just ensure _id is string
+    // Products are already plain objects from lean(), ensure _id is string and handle images
     const result = { 
-      products: products.map((p: any) => ({
-        ...p,
-        _id: p._id ? p._id.toString() : p._id
-      })), 
+      products: products.map((p: any) => {
+        // Handle backward compatibility: convert mediaFileId to images array if needed
+        let images: string[] = [];
+        if (p.images && p.images.length > 0) {
+          images = p.images;
+        } else if (p.mediaFileId) {
+          images = [p.mediaFileId];
+        }
+        
+        return {
+          ...p,
+          _id: p._id ? p._id.toString() : p._id,
+          images,
+          mediaFileId: p.mediaFileId || (images.length > 0 ? images[0] : null) // Keep for backward compatibility
+        };
+      }), 
       total 
     };
     
@@ -247,6 +268,13 @@ export class ProductService {
     }
     if (data.availableTimeUnit !== undefined) {
       product.availableTimeUnit = data.availableTimeUnit;
+    }
+    if (data.images !== undefined) {
+      // Validate max 4 images
+      if (data.images.length > 4) {
+        throw new Error('Maximum 4 images allowed');
+      }
+      product.images = data.images;
     }
 
     await product.save();

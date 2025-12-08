@@ -9,6 +9,7 @@ interface EnvConfig {
   PORT: string;
   CORS_ORIGIN?: string;
   SUPER_ADMIN_ID?: string;
+  STORAGE_CHAT_ID?: string; // Private channel ID for image storage (recommended)
   BOT_USERNAME?: string;
   NODE_ENV?: string;
   ENABLE_MOCK_AUTH?: string; // For Postman testing

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Loader2, Image as ImageIcon, RefreshCw, AlertCircle } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
-import { type Product } from '../types';
+import { type Product, getProductImageIds } from '../types';
 import { showToast } from '../components/Toast';
 import { Pagination } from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
@@ -188,23 +188,41 @@ const FeedPage = () => {
               {(products || []).map((product) => (
                 <div 
                   key={product._id} 
-                  className="bg-white rounded-lg shadow-md overflow-hidden"
+                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => handleDetails(product)}
                 >
                   {/* Product Image - Compact */}
-                  <div className="h-32 bg-gray-100 overflow-hidden">
-                    {product.mediaFileId && !failedImages.has(product._id) ? (
-                      <img 
-                        src={getImageUrl(product.mediaFileId)} 
-                        alt={product.title}
-                        className="w-full h-full object-cover"
-                        onError={() => handleImageError(product._id)}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                        <ImageIcon size={24} className="opacity-50"/>
-                        <span className="text-[10px] mt-1">No Image</span>
-                      </div>
-                    )}
+                  <div className="h-32 bg-gray-100 overflow-hidden relative">
+                    {(() => {
+                      const imageIds = getProductImageIds(product);
+                      const firstImageId = imageIds[0];
+                      
+                      if (firstImageId && !failedImages.has(product._id)) {
+                        return (
+                          <>
+                            <img 
+                              src={getImageUrl(firstImageId)} 
+                              alt={product.title}
+                              className="w-full h-full object-cover"
+                              onError={() => handleImageError(product._id)}
+                            />
+                            {/* Image count badge */}
+                            {imageIds.length > 1 && (
+                              <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                                +{imageIds.length - 1}
+                              </div>
+                            )}
+                          </>
+                        );
+                      }
+                      
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                          <ImageIcon size={24} className="opacity-50"/>
+                          <span className="text-[10px] mt-1">No Image</span>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Card Content - Compact */}
@@ -222,13 +240,19 @@ const FeedPage = () => {
                     {/* Action Buttons */}
                     <div className="mt-3 flex gap-2">
                       <button 
-                        onClick={() => handleDetails(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDetails(product);
+                        }}
                         className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-md text-xs font-semibold hover:bg-gray-300 active:scale-95 transition-all"
                       >
                         Details
                       </button>
                       <button 
-                        onClick={() => handleBuy(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBuy(product);
+                        }}
                         className="flex-1 bg-blue-600 text-white py-2 rounded-md text-xs font-semibold hover:bg-blue-700 active:scale-95 transition-all"
                       >
                         Buy Now

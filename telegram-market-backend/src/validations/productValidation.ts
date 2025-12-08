@@ -134,6 +134,10 @@ export const submitProductSchema = z.object({
   mediaFileId: z.string()
     .optional()
     .nullable(),
+  images: z.array(z.string())
+    .max(4, 'Maximum 4 images allowed')
+    .optional()
+    .nullable(),
   madeIn: z.string()
     .max(100, 'Made in location must not exceed 100 characters')
     .trim()
@@ -276,6 +280,10 @@ export const updateProductSchema = z.object({
   availableTimeUnit: z.nativeEnum(AvailableTimeUnit, {
     message: 'Available time unit must be: hour, day, weeks, or month'
   })
+    .optional()
+    .nullable(),
+  images: z.array(z.string())
+    .max(4, 'Maximum 4 images allowed')
     .optional()
     .nullable()
 }).transform((data) => {
