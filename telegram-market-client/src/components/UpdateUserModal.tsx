@@ -59,8 +59,10 @@ export const UpdateUserModal = ({
 
       await onSubmit(user._id, updateData);
       onClose();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to update user';
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error 
+        || (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.message 
+        || 'Failed to update user';
       setError(errorMessage);
     } finally {
       setLoading(false);

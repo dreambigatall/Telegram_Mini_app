@@ -47,8 +47,9 @@ export const RejectModal = ({
     try {
       await onSubmit(reason.trim());
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reject item');
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to reject item';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -61,12 +62,12 @@ export const RejectModal = ({
       title="Reject Product" 
       size="md"
       footer={
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+            className="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition disabled:opacity-50"
           >
             Cancel
           </button>
@@ -74,11 +75,11 @@ export const RejectModal = ({
             type="submit"
             form="reject-product-form"
             disabled={loading}
-            className="flex-1 bg-red-600 text-white font-medium py-2.5 rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 bg-red-600 text-white font-semibold py-3 rounded-xl hover:bg-red-700 shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin" size={18} />
+                <Loader2 className="animate-spin" size={20} />
                 Rejecting...
               </>
             ) : (
@@ -88,33 +89,34 @@ export const RejectModal = ({
         </div>
       }
     >
-      <form id="reject-product-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="reject-product-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Product Title Display */}
         {productTitle && (
-          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-            <p className="text-xs text-red-600 font-medium mb-1">Product</p>
-            <p className="text-sm font-bold text-red-800">{productTitle}</p>
+          <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+            <p className="text-xs text-red-600 font-bold uppercase tracking-wide mb-1">Product to Reject</p>
+            <p className="text-lg font-bold text-gray-900">{productTitle}</p>
           </div>
         )}
 
         {/* Rejection Reason Input */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-bold text-gray-700 mb-2">
             Rejection Reason
           </label>
-          <div className="relative">
-            <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
+          <div className="relative group">
+            <FileText className="absolute left-4 top-4 text-gray-400 group-focus-within:text-red-500 transition-colors" size={20} />
             <textarea
               required
               rows={4}
-              placeholder="Enter reason for rejection..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none resize-none"
+              placeholder="Explain why this product is being rejected..."
+              className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl focus:ring-4 focus:ring-red-100 focus:border-red-500 focus:outline-none resize-none transition-all font-medium"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               disabled={loading}
               autoFocus
             />
           </div>
+          <p className="text-xs text-gray-500 mt-2">This reason will be sent to the seller.</p>
         </div>
 
         {/* Error Message */}

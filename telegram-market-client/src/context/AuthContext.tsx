@@ -88,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // If no initData in dev mode, use mock user for testing
         if (!initData && isDevMode) {
-          console.warn('⚠️ Running in dev mode without initData. Using mock user.');
           // You can change this role to test different user types:
           // 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'SELLER' | 'BUYER'
           const mockUser: User = {
@@ -120,13 +119,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setError('Failed to retrieve user information.');
           setUser(null);
         }
-      } catch (err: any) {
-        console.error('Auth error:', err);
-        
+      } catch (err: unknown) {
         // Handle different error scenarios
-        if (err.response) {
-          const status = err.response.status;
-          const message = err.response.data?.message || err.response.data?.error || 'Authentication failed';
+        const errorObj = err as { response?: { status?: number; data?: { message?: string; error?: string } }; request?: unknown };
+        if (errorObj.response) {
+          const status = errorObj.response.status;
+          const message = errorObj.response.data?.message || errorObj.response.data?.error || 'Authentication failed';
 
           if (status === 401) {
             setError('Not authenticated. Please make sure you are logged in.');
@@ -141,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             setError(message || 'Failed to authenticate. Please try again.');
           }
-        } else if (err.request) {
+        } else if (errorObj.request) {
           // Network error
           setError('Network error. Please check your connection and try again.');
         } else {
@@ -199,4 +197,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 // 4. Create a custom hook for easy access
+// Note: This is exported alongside components, but fast refresh still works for the component
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

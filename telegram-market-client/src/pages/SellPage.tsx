@@ -3,15 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { 
   DollarSign, Type, FileText, Globe, Calendar, AlertCircle, Loader2, 
-  ArrowLeft, Plus, X, Check, Image as ImageIcon, ChevronLeft, ChevronRight
+  ArrowLeft, Plus, Image as ImageIcon, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { showToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { ImageUploader } from '../components/ImageUploader';
 import { ProgressBar } from '../components/ProgressBar';
-
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://route-betty-sol-disk.trycloudflare.com/api';
+import { postFormData } from '../utils/api';
 
 // Welcome illustration URL
 const WELCOME_ILLUSTRATION_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAtLJhxi-DZzaowzRBpbUM3G4GBHQoh1CwPkBMmbH2SUQaZqMpacCh3qZ1Y5FPsvPT4sZ-n4s7b0PPKmRR8Ks8jimNEM1H5aCWv4l3l094mtY5JJ3wzL7doON1zWYUd4QL6AHS6mDG-kVPHHUHzlZwzI0rASXdd8YbnSihe-41LJJ9I5MtgDQfjZ_AmMSfqbXj-DFVK5OiQzxMOqnBF28NjSlButL3W0lry_1NOtuZGqqsKLfzC6S-2XZ7TuvxUtK9eEVi8OcIiwpk';
@@ -21,7 +19,7 @@ const TOTAL_STEPS = 3;
 const SellPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { canSubmitProducts, isBuyer, isSeller, isLoading } = useAuth();
+  const { canSubmitProducts, isSeller, isLoading } = useAuth();
   
   // Welcome screen state - determined by URL
   const showWelcome = location.pathname === '/sell';
@@ -148,12 +146,6 @@ const SellPage = () => {
     }
   };
 
-  // Handle close button
-  const handleClose = () => {
-    resetForm();
-    navigate('/sell');
-  };
-
   // Handle Next button
   const handleNext = () => {
     if (currentStep === 1 && isStep1Valid) {
@@ -175,6 +167,13 @@ const SellPage = () => {
       setError('Price must be greater than 0');
       setLoading(false);
       return;
+    }
+
+    // Haptic feedback on submit
+    try {
+      WebApp.HapticFeedback?.impactOccurred('medium');
+    } catch {
+      // Haptic feedback not available, ignore
     }
 
     try {
@@ -201,22 +200,11 @@ const SellPage = () => {
         submitData.append('images', file);
       });
 
-      // Send request with FormData
-      const response = await fetch(`${API_BASE_URL}/products`, {
-        method: 'POST',
-        headers: {
-          'Authorization': WebApp.initData || '',
-        },
-        body: submitData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || 'Failed to submit product');
-      }
+      // Send request using centralized API
+      await postFormData<{ success: boolean; message?: string; error?: string }>('/products', submitData);
 
       // Success!
+      WebApp.HapticFeedback?.notificationOccurred('success');
       showToast('✅ Item submitted! Waiting for Admin approval.', 'success');
       
       // SELLER stays on page and resets to welcome, others navigate to feed
@@ -227,17 +215,20 @@ const SellPage = () => {
         navigate('/');
       }
       
-    } catch (err: any) {
-      console.error('Submit error:', err);
+    } catch (err: unknown) {
+      WebApp.HapticFeedback?.notificationOccurred('error');
       
-      if (err.message?.includes('Maximum 4 images')) {
+      const errorObj = err as { response?: { data?: { message?: string; error?: string } }; message?: string };
+      const errorMessage = errorObj.response?.data?.message || errorObj.response?.data?.error || errorObj.message || '';
+      
+      if (errorMessage.includes('Maximum 4 images')) {
         setImageError('Maximum 4 images allowed');
-      } else if (err.message?.includes('Invalid file type')) {
+      } else if (errorMessage.includes('Invalid file type')) {
         setImageError('Invalid file type. Only images are allowed');
-      } else if (err.message?.includes('exceeds maximum size')) {
+      } else if (errorMessage.includes('exceeds maximum size')) {
         setImageError('File size must be less than 10MB');
       } else {
-        setError(err.message || 'Failed to submit item. Please try again.');
+        setError(errorMessage || 'Failed to submit item. Please try again.');
       }
     } finally {
       setLoading(false);

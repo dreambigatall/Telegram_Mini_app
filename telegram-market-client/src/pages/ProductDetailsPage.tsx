@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, AlertCircle, Globe, Calendar, Clock, User, Phone, MessageCircle, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Globe, Calendar, Clock, User, Phone, MessageCircle, Image as ImageIcon } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import api, { getImageUrl } from '../utils/api';
 import { type Product, formatAvailableTime, getProductImageIds } from '../types';
@@ -38,15 +38,14 @@ const ProductDetailsPage = () => {
       } else {
         setError('Product not found');
       }
-    } catch (err: any) {
-      console.error('Error fetching product:', err);
-      
-      if (err.response?.status === 404) {
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { status?: number; data?: { message?: string } } };
+      if (errorObj.response?.status === 404) {
         setError('Product not found');
-      } else if (err.response?.status === 403) {
+      } else if (errorObj.response?.status === 403) {
         setError('You do not have permission to view this product');
       } else {
-        setError(err.response?.data?.message || 'Failed to load product details');
+        setError(errorObj.response?.data?.message || 'Failed to load product details');
       }
     } finally {
       setLoading(false);
@@ -55,6 +54,7 @@ const ProductDetailsPage = () => {
 
   useEffect(() => {
     fetchProduct();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Handle carousel scroll to update active dot
@@ -94,7 +94,7 @@ const ProductDetailsPage = () => {
     }
 
     const username = product.adminContact.username.replace('@', '');
-    const text = `Hi! I am interested in "${product.title}" (ID: ${product._id}). Is it available?`;
+    const text = `Hi! I am interested in "${product.title}". Is it available?`;
     const url = `https://t.me/${username}?text=${encodeURIComponent(text)}`;
     
     WebApp.openTelegramLink(url);

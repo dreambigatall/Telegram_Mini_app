@@ -56,8 +56,9 @@ export const PriceInputModal = ({
     try {
       await onSubmit(price, adminUsername.trim());
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to approve item');
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to approve item';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -70,12 +71,12 @@ export const PriceInputModal = ({
       title="Approve Product" 
       size="md"
       footer={
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+            className="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition disabled:opacity-50"
           >
             Cancel
           </button>
@@ -83,11 +84,11 @@ export const PriceInputModal = ({
             type="submit"
             form="approve-product-form"
             disabled={loading}
-            className="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-xl hover:bg-green-700 shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin" size={18} />
+                <Loader2 className="animate-spin" size={20} />
                 Publishing...
               </>
             ) : (
@@ -97,52 +98,59 @@ export const PriceInputModal = ({
         </div>
       }
     >
-      <form id="approve-product-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="approve-product-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Original Price Display */}
-        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-600 font-medium mb-1">Original Price</p>
-          <p className="text-lg font-bold text-blue-800">${originalPrice}</p>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 flex justify-between items-center">
+          <div>
+            <p className="text-xs text-blue-600 font-bold uppercase tracking-wide mb-1">Seller's Original Price</p>
+            <p className="text-2xl font-black text-gray-900 tracking-tight">${originalPrice}</p>
+          </div>
+          <div className="bg-white p-2 rounded-full shadow-sm text-blue-600">
+             <DollarSign size={24} />
+          </div>
         </div>
 
         {/* Final Price Input */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-bold text-gray-700 mb-2">
             Final Price ($)
           </label>
-          <div className="relative">
-            <DollarSign className="absolute left-3 top-3 text-gray-400" size={18} />
+          <div className="relative group">
+            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
             <input
               type="number"
               step="0.01"
               min="0"
               required
-              placeholder="Enter final price"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              placeholder="0.00"
+              className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all text-lg font-medium"
               value={finalPrice}
               onChange={(e) => setFinalPrice(e.target.value)}
               disabled={loading}
               autoFocus
             />
           </div>
+          <p className="text-xs text-gray-500 mt-2">Set the final selling price including fees.</p>
         </div>
 
         {/* Admin Username Input */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Your Display Username (without @)
+          <label className="block text-sm font-bold text-gray-700 mb-2">
+            Admin Display Name
           </label>
-          <div className="relative">
-            <User className="absolute left-3 top-3 text-gray-400" size={18} />
+          <div className="relative group">
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
             <input
               type="text"
               required
-              placeholder="SuperBroker"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              placeholder="e.g. SuperBroker"
+              className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 focus:outline-none transition-all font-medium"
               value={adminUsername}
               onChange={(e) => setAdminUsername(e.target.value)}
               disabled={loading}
             />
           </div>
+          <p className="text-xs text-gray-500 mt-2">This name will be visible to buyers.</p>
         </div>
 
         {/* Error Message */}

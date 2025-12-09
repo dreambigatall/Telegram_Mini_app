@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { Camera, X, Plus, AlertCircle } from 'lucide-react';
 import { IMAGE_UPLOAD_CONFIG, validateImageFile } from '../types';
 
@@ -24,23 +24,57 @@ export const ImageUploader = ({
   disabled = false,
 }: ImageUploaderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const previewUrlsRef = useRef<string[]>([]);
+  const previewUrlsRef = useRef<Map<File, string>>(new Map());
+  const previousImagesRef = useRef<File[]>([]);
 
-  // Clean up object URLs when component unmounts or images change
+  // Create preview URLs using useMemo - create URLs directly from files
+  // Note: We create new URLs each time, but File objects are stable references
+  const previewUrls = useMemo(() => {
+    const urlMap = new Map<File, string>();
+    
+    // Create URLs for each file
+    images.forEach((file) => {
+      const url = URL.createObjectURL(file);
+      urlMap.set(file, url);
+    });
+    
+    return urlMap;
+  }, [images]);
+
+  // Store URLs in ref and clean up old ones
   useEffect(() => {
+    const previousImages = previousImagesRef.current;
+    const currentUrls = previewUrlsRef.current;
+    const currentFiles = new Set(images);
+    
+    // Store new URLs in ref for cleanup tracking
+    previewUrls.forEach((url, file) => {
+      currentUrls.set(file, url);
+    });
+    
+    // Revoke URLs for files that were removed
+    previousImages.forEach((file) => {
+      if (!currentFiles.has(file)) {
+        const url = currentUrls.get(file);
+        if (url) {
+          URL.revokeObjectURL(url);
+          currentUrls.delete(file);
+        }
+      }
+    });
+    
+    // Update previous images reference
+    previousImagesRef.current = images;
+  }, [images, previewUrls]);
+
+  // Clean up object URLs when component unmounts
+  useEffect(() => {
+    const currentUrls = previewUrlsRef.current;
     return () => {
-      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      currentUrls.forEach(url => URL.revokeObjectURL(url));
+      currentUrls.clear();
     };
   }, []);
-
-  // Create preview URLs for images
-  const getPreviewUrl = (file: File, index: number): string => {
-    // Reuse existing URL if available
-    if (!previewUrlsRef.current[index]) {
-      previewUrlsRef.current[index] = URL.createObjectURL(file);
-    }
-    return previewUrlsRef.current[index];
-  };
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,8 +100,6 @@ export const ImageUploader = ({
     }
 
     if (validFiles.length > 0) {
-      // Clear old preview URLs for new images
-      previewUrlsRef.current = previewUrlsRef.current.slice(0, images.length);
       onImagesChange([...images, ...validFiles]);
     }
 
@@ -79,13 +111,14 @@ export const ImageUploader = ({
 
   // Handle image removal
   const handleRemoveImage = (index: number) => {
-    // Revoke the URL for the removed image
-    if (previewUrlsRef.current[index]) {
-      URL.revokeObjectURL(previewUrlsRef.current[index]);
-    }
+    const fileToRemove = images[index];
     
-    // Remove from preview URLs array
-    previewUrlsRef.current = previewUrlsRef.current.filter((_, i) => i !== index);
+    // Revoke the URL for the removed image
+    const urlToRevoke = previewUrlsRef.current.get(fileToRemove);
+    if (urlToRevoke) {
+      URL.revokeObjectURL(urlToRevoke);
+      previewUrlsRef.current.delete(fileToRemove);
+    }
     
     // Remove from images array
     const newImages = images.filter((_, i) => i !== index);
@@ -115,14 +148,16 @@ export const ImageUploader = ({
       {/* Image Grid */}
       <div className="grid grid-cols-4 gap-2">
         {/* Preview existing images */}
-        {images.map((file, index) => (
+        {images.map((file, index) => {
+          const previewUrl = previewUrls.get(file) || '';
+          return (
           <div 
             key={index} 
             className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 cursor-pointer hover:border-blue-400 transition-colors"
             onClick={() => onImageClick?.(file, index)}
           >
             <img
-              src={getPreviewUrl(file, index)}
+              src={previewUrl}
               alt={`Preview ${index + 1}`}
               className="w-full h-full object-cover"
             />
@@ -144,7 +179,8 @@ export const ImageUploader = ({
               {index + 1}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Add button (if not at max) */}
         {canAddMore && (

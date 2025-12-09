@@ -110,18 +110,19 @@ export const ToastContainer = () => {
 
   useEffect(() => {
     // Listen for toast events
-    const handleToast = (event: CustomEvent<Omit<Toast, 'id'>>) => {
+    const handleToast = (event: Event) => {
+      const customEvent = event as CustomEvent<Omit<Toast, 'id'>>;
       const newToast: Toast = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        ...event.detail,
+        ...customEvent.detail,
       };
       setToasts((prev) => [...prev, newToast]);
     };
 
-    window.addEventListener('showToast' as any, handleToast as EventListener);
+    window.addEventListener('showToast', handleToast);
 
     return () => {
-      window.removeEventListener('showToast' as any, handleToast as EventListener);
+      window.removeEventListener('showToast', handleToast);
     };
   }, []);
 
@@ -135,7 +136,14 @@ export const ToastContainer = () => {
   const visibleToasts = toasts.slice(0, 3);
 
   return (
-    <div className="fixed top-16 right-4 z-50 flex flex-col items-end gap-2" style={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+    <div 
+      className="fixed right-4 z-50 flex flex-col items-end gap-2" 
+      style={{ 
+        top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+        maxHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 120px)', 
+        overflowY: 'auto' 
+      }}
+    >
       {visibleToasts.map((toast) => (
         <ToastNotification key={toast.id} toast={toast} onClose={handleClose} />
       ))}
@@ -145,7 +153,9 @@ export const ToastContainer = () => {
 
 /**
  * Helper function to show toast notifications
+ * Note: This is exported alongside components, but fast refresh still works for the component
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const showToast = (message: string, type: ToastType = 'info', duration?: number) => {
   const event = new CustomEvent('showToast', {
     detail: { message, type, duration },
