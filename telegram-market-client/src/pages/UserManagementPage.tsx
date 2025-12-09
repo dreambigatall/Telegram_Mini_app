@@ -71,17 +71,17 @@ const UserManagementPage = () => {
         setUsers([]);
         setTotal(0);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Only show error toast for actual errors (network errors, 4xx, 5xx)
       // Don't show error if it's just a response structure issue
-      if (err.response && err.response.status >= 400) {
-        const message = err.response?.data?.error || err.response?.data?.message || 'Failed to load users';
+      const errorObj = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
+      if (errorObj.response && errorObj.response.status && errorObj.response.status >= 400) {
+        const message = errorObj.response?.data?.error || errorObj.response?.data?.message || 'Failed to load users';
         showToast(message, 'error');
-      } else if (!err.response) {
+      } else if (!errorObj.response) {
         // Network error
         showToast('Network error. Please check your connection.', 'error');
       }
-      console.error('Error fetching users:', err);
       setUsers([]);
       setTotal(0);
     } finally {
@@ -93,6 +93,7 @@ const UserManagementPage = () => {
     if (isSuperAdmin) {
       fetchUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, filters.role, filters.isBanned, filters.search, isSuperAdmin]);
 
   // Redirect if not super admin
@@ -120,8 +121,9 @@ const UserManagementPage = () => {
       fetchUsers(); // Refresh list
       setUpdateModalOpen(false);
       setSelectedUser(null);
-    } catch (err: any) {
-      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to update user';
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string; message?: string } } };
+      const message = errorObj.response?.data?.error || errorObj.response?.data?.message || 'Failed to update user';
       showToast(message, 'error');
       throw err; // Re-throw so modal can handle it
     }
@@ -142,15 +144,16 @@ const UserManagementPage = () => {
       fetchUsers(); // Refresh list
       setDeleteModalOpen(false);
       setSelectedUser(null);
-    } catch (err: any) {
-      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to delete user';
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string; message?: string } } };
+      const message = errorObj.response?.data?.error || errorObj.response?.data?.message || 'Failed to delete user';
       showToast(message, 'error');
       throw err; // Re-throw so modal can handle it
     }
   };
 
   // Handle filter changes
-  const handleFilterChange = (key: keyof typeof filters, value: any) => {
+  const handleFilterChange = (key: keyof typeof filters, value: User['role'] | boolean | undefined | string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(1); // Reset to first page on filter change
   };

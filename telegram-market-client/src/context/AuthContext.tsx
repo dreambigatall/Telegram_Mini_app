@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import api from '../utils/api';
 import WebApp from '@twa-dev/sdk';
+import { type UserRole } from '../types';
 
 // 1. Define what our User looks like
 interface User {
   id: string;
   username?: string;
   firstName?: string;
-  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+  role: UserRole;  // Updated to include SELLER and BUYER
   isBanned?: boolean;
 }
 
@@ -17,7 +18,7 @@ interface BackendUserResponse {
   telegramId: string;
   username?: string;
   firstName?: string;
-  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+  role: UserRole;  // Updated to include SELLER and BUYER
   isBanned: boolean;
   createdAt: string;
 }
@@ -25,18 +26,30 @@ interface BackendUserResponse {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  error: string | null;
+  // Role checks
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  error: string | null;
+  isSeller: boolean;      // NEW: Check if user is SELLER role
+  isBuyer: boolean;       // NEW: Check if user is BUYER role
+  // Permission checks
+  canSubmitProducts: boolean;  // NEW: Can user submit products?
+  canViewFeed: boolean;        // NEW: Can user view the feed?
 }
 
 // 2. Create the Context
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
+  error: null,
+  // Role checks
   isAdmin: false,
   isSuperAdmin: false,
-  error: null,
+  isSeller: false,
+  isBuyer: false,
+  // Permission checks
+  canSubmitProducts: false,
+  canViewFeed: false,
 });
 
 // Helper function to transform backend user to frontend user
@@ -75,11 +88,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // If no initData in dev mode, use mock user for testing
         if (!initData && isDevMode) {
-          console.warn('⚠️ Running in dev mode without initData. Using mock user.');
+          // You can change this role to test different user types:
+          // 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'SELLER' | 'BUYER'
           const mockUser: User = {
             id: 'dev-mock-id',
             username: 'DevUser',
-            role: 'ADMIN',
+            role: 'ADMIN',  // Change this to test different roles
             isBanned: false,
           };
           setUser(mockUser);
@@ -105,13 +119,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setError('Failed to retrieve user information.');
           setUser(null);
         }
-      } catch (err: any) {
-        console.error('Auth error:', err);
-        
+      } catch (err: unknown) {
         // Handle different error scenarios
-        if (err.response) {
-          const status = err.response.status;
-          const message = err.response.data?.message || err.response.data?.error || 'Authentication failed';
+        const errorObj = err as { response?: { status?: number; data?: { message?: string; error?: string } }; request?: unknown };
+        if (errorObj.response) {
+          const status = errorObj.response.status;
+          const message = errorObj.response.data?.message || errorObj.response.data?.error || 'Authentication failed';
 
           if (status === 401) {
             setError('Not authenticated. Please make sure you are logged in.');
@@ -126,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             setError(message || 'Failed to authenticate. Please try again.');
           }
-        } else if (err.request) {
+        } else if (errorObj.request) {
           // Network error
           setError('Network error. Please check your connection and try again.');
         } else {
@@ -142,16 +155,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchCurrentUser();
   }, []);
 
-  // Helper booleans - check if user is admin or super admin
+  // ============================================
+  // ROLE CHECKS
+  // ============================================
+  
+  // Admin roles
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  
+  // NEW: Specialized roles
+  const isSeller = user?.role === 'SELLER';
+  const isBuyer = user?.role === 'BUYER';
+
+  // ============================================
+  // PERMISSION CHECKS
+  // ============================================
+  
+  // NEW: Can submit products (SELLER, USER, ADMIN, SUPER_ADMIN)
+  const canSubmitProducts = user !== null && ['SELLER', 'USER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role);
+  
+  // NEW: Can view feed (BUYER, USER, ADMIN, SUPER_ADMIN)
+  const canViewFeed = user !== null && ['BUYER', 'USER', 'ADMIN', 'SUPER_ADMIN'].includes(user.role);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAdmin, isSuperAdmin, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      error,
+      // Role checks
+      isAdmin, 
+      isSuperAdmin,
+      isSeller,
+      isBuyer,
+      // Permission checks
+      canSubmitProducts,
+      canViewFeed,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 // 4. Create a custom hook for easy access
+// Note: This is exported alongside components, but fast refresh still works for the component
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

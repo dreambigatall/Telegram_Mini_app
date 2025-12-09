@@ -8,13 +8,24 @@ export enum ProductStatus {
   DELETED = 'DELETED'        // Soft deleted by Admin
 }
 
+export enum AvailableTimeUnit {
+  HOUR = 'hour',
+  DAY = 'day',
+  WEEKS = 'weeks',
+  MONTH = 'month'
+}
+
 export interface IProduct extends Document {
   seller: Types.ObjectId;    // Reference to the original User (HIDDEN from API)
   title: string;
   description: string;
   originalPrice: number;
-  mediaFileId: string;       // Telegram File ID for photo/video
+  mediaFileId?: string;       // Telegram File ID for photo/video (legacy, kept for backward compatibility)
+  images?: string[];          // Array of Telegram File IDs (max 4 images)
   status: ProductStatus;
+  madeIn?: string;          // Country/manufacturing location (optional)
+  expirationDate?: Date;     // Product expiration date (optional, parsed)
+  expirationDateRaw?: string; // Original expiration date string as entered by user (optional)
   
   // Admin Fields (Populated only when status is PUBLISHED)
   approvedBy?: Types.ObjectId;
@@ -23,6 +34,8 @@ export interface IProduct extends Document {
     phoneNumber: string;   // Admin's Phone to show to buyer
   };
   finalPrice?: number;     // Admin might adjust price
+  availableTimeValue?: number;  // Product available time value (optional, set by admin)
+  availableTimeUnit?: AvailableTimeUnit; // Product available time unit (optional, set by admin)
 }
 
 const ProductSchema: Schema = new Schema({
@@ -30,7 +43,11 @@ const ProductSchema: Schema = new Schema({
   title: { type: String, required: true },
   description: { type: String },
   originalPrice: { type: Number, required: true },
-  mediaFileId: { type: String }, // We store the Telegram File ID
+  mediaFileId: { type: String }, // Legacy: Telegram File ID (kept for backward compatibility)
+  images: { type: [String], default: [] }, // Array of Telegram File IDs (max 4 images)
+  madeIn: { type: String }, // Country/manufacturing location (optional)
+  expirationDate: { type: Date }, // Product expiration date (optional, parsed)
+  expirationDateRaw: { type: String }, // Original expiration date string as entered by user (optional)
   
   status: { 
     type: String, 
@@ -45,7 +62,12 @@ const ProductSchema: Schema = new Schema({
   adminContact: {
     username: { type: String },
     phoneNumber: { type: String }
-  }
+  },
+  availableTimeValue: { type: Number }, // Product available time value (optional, set by admin)
+  availableTimeUnit: { 
+    type: String, 
+    enum: Object.values(AvailableTimeUnit) 
+  } // Product available time unit (optional, set by admin)
 }, {
   timestamps: true
 });

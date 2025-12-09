@@ -59,8 +59,10 @@ export const UpdateUserModal = ({
 
       await onSubmit(user._id, updateData);
       onClose();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to update user';
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error 
+        || (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.message 
+        || 'Failed to update user';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -172,11 +174,20 @@ export const UpdateUserModal = ({
               onChange={(e) => setRole(e.target.value as User['role'])}
               disabled={loading}
             >
-              <option value="USER">User</option>
+              <option value="USER">User (Buy & Sell)</option>
+              <option value="BUYER">Buyer Only</option>
+              <option value="SELLER">Seller Only</option>
               <option value="ADMIN">Admin</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {role === 'USER' && '✓ Full access: Can view marketplace and submit products'}
+            {role === 'BUYER' && '👁️ View only: Can browse and buy, cannot sell'}
+            {role === 'SELLER' && '📦 Sell only: Can submit products, cannot browse marketplace'}
+            {role === 'ADMIN' && '⚡ Admin access: Full control + admin dashboard'}
+            {role === 'SUPER_ADMIN' && '🔐 Super Admin: Full control + user management'}
+          </p>
         </div>
 
         {/* Is Banned Toggle */}

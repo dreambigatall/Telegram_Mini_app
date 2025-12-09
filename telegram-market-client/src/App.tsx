@@ -1,18 +1,33 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { AuthProvider } from './context/AuthContext';
+
 // Import Pages
 import FeedPage from './pages/FeedPage';
 import SellPage from './pages/SellPage';
 import AdminPage from './pages/AdminPage';
 import UserManagementPage from './pages/UserManagementPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
 
 // Import Components
 import Navbar from './components/Navbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorDisplay } from './components/ErrorDisplay';
 import { ToastContainer } from './components/Toast';
+
+// Component to conditionally show/hide Navbar
+function ConditionalNavbar() {
+  const location = useLocation();
+  
+  // Hide navbar on product details page and sell form page (they have their own footers)
+  const hideNavbarRoutes = ['/product', '/sell/form'];
+  const shouldHideNavbar = hideNavbarRoutes.some(route => location.pathname.startsWith(route));
+  
+  if (shouldHideNavbar) return null;
+  
+  return <Navbar />;
+}
 
 // Inner App Component - has access to AuthContext
 function AppContent() {
@@ -22,7 +37,7 @@ function AppContent() {
         Main Content Wrapper 
         pb-20 adds padding at the bottom so the fixed Navbar doesn't cover content 
       */}
-      <div className="min-h-screen bg-gray-100 pb-20 text-gray-900">
+      <div className="min-h-screen bg-gray-100 text-gray-900">
         
         {/* Display authentication errors at the top */}
         <ErrorDisplay className="m-4" />
@@ -30,14 +45,16 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<FeedPage />} />
           <Route path="/sell" element={<SellPage />} />
+          <Route path="/sell/form" element={<SellPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/users" element={<UserManagementPage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
         </Routes>
 
       </div>
 
-      {/* Navbar sits outside Routes so it is always visible */}
-      <Navbar />
+      {/* Navbar sits outside Routes - conditionally hidden on some pages */}
+      <ConditionalNavbar />
       
       {/* Toast notifications */}
       <ToastContainer />

@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   footer?: ReactNode;
 }
 
@@ -43,6 +43,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md', footer }:
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
   };
 
   return (
@@ -74,13 +75,13 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md', footer }:
         )}
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 pb-20">
+        <div className="flex-1 overflow-y-auto p-4" style={{ paddingBottom: footer ? '5rem' : '1rem' }}>
           {children}
         </div>
 
-        {/* Footer - Sticky */}
+        {/* Footer - Sticky at bottom */}
         {footer && (
-          <div className="flex-shrink-0 border-t border-gray-200 bg-white p-4 rounded-b-xl">
+          <div className="flex-shrink-0 sticky bottom-0 border-t border-gray-200 bg-white p-4 rounded-b-xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
             {footer}
           </div>
         )}

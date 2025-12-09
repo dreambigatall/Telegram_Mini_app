@@ -32,8 +32,10 @@ export const DeleteConfirmModal = ({
     try {
       await onSubmit();
       onClose();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || `Failed to delete ${itemType.toLowerCase()}`;
+    } catch (err: unknown) {
+      const errorMessage = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error 
+        || (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.message 
+        || `Failed to delete ${itemType.toLowerCase()}`;
       setError(errorMessage);
     } finally {
       setLoading(false);
