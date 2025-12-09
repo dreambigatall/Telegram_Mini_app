@@ -164,12 +164,12 @@ export const canViewFeed = (role?: UserRole): boolean => {
 export const formatAvailableTime = (value?: number, unit?: AvailableTimeUnit): string | null => {
   if (!value || !unit) return null;
   
-  let displayUnit = unit;
+  let displayUnit: string = unit;
   if (value === 1) {
     displayUnit = unit === 'weeks' ? 'week' : unit;
   } else {
     if (unit !== 'weeks') {
-      displayUnit = `${unit}s` as AvailableTimeUnit;
+      displayUnit = `${unit}s`;
     }
   }
   

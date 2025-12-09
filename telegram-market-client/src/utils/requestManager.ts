@@ -13,7 +13,6 @@ class RequestManager {
   private pendingRequests = new Map<string, PendingRequest>();
   private requestCache = new Map<string, { data: unknown; timestamp: number }>();
   private readonly CACHE_TTL = 2000; // 2 seconds cache
-  private readonly REQUEST_TIMEOUT = 30000; // 30 seconds
 
   /**
    * Generate a unique key for a request
@@ -164,7 +163,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {

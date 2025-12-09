@@ -152,15 +152,16 @@ const AdminPage = () => {
       setPublishedProducts(productsData);
     } catch (err: unknown) {
       // Handle 429 (Rate Limit) specifically
-      if (err.response?.status === 429) {
-        const message = err.response?.data?.message || err.enhancedMessage || 'Too many requests. Please wait a moment.';
+      const errorObj = err as { response?: { status?: number; data?: { message?: string; error?: string } }; enhancedMessage?: string };
+      if (errorObj.response?.status === 429) {
+        const message = errorObj.response?.data?.message || errorObj.enhancedMessage || 'Too many requests. Please wait a moment.';
         showToast(message, 'warning');
-      } else if (err.response?.status === 401) {
-        const message = err.response?.data?.message || err.response?.data?.error || 'Session expired. Please refresh the page.';
+      } else if (errorObj.response?.status === 401) {
+        const message = errorObj.response?.data?.message || errorObj.response?.data?.error || 'Session expired. Please refresh the page.';
         showToast(message, 'error');
       } else {
         // Other errors - show generic message
-        const message = err.response?.data?.message || err.response?.data?.error || 'Failed to load published items';
+        const message = errorObj.response?.data?.message || errorObj.response?.data?.error || 'Failed to load published items';
         showToast(message, 'error');
       }
       

@@ -247,7 +247,7 @@ const FeedPage = () => {
         <AlertCircle size={32} className="mx-auto mb-2" />
         <p>{error}</p>
         <button
-          onClick={fetchFeed}
+          onClick={() => fetchFeed()}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
         >
           Try Again
