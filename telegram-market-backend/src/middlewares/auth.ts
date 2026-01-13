@@ -1,146 +1,134 @@
 import { Request, Response, NextFunction } from 'express';
 import { validateTelegramData } from '../utils/validateTelegramData';
 import User from '../models/User';
+import { AppError } from './errorHandler';
+import { cacheService, CacheKeys } from '../utils/cache';
 
 export const protect = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // 1. Get the token from Headers
-    // Frontend should send: Authorization: "query_id=..." (The raw initData string)
+    // MOCK AUTHENTICATION FOR POSTMAN TESTING
+    // Set ENABLE_MOCK_AUTH=true in .env to enable
+    if (process.env.ENABLE_MOCK_AUTH === 'true') {
+      const mockTelegramId = req.headers['x-mock-telegram-id'] as string || '123456789';
+      const mockRole = (req.headers['x-mock-role'] as string || 'USER').toUpperCase();
+      
+      // Find or create mock user
+      let user = await User.findOne({ telegramId: mockTelegramId, isDeleted: { $ne: true } });
+      
+      if (!user) {
+        // Create mock user if doesn't exist
+        user = await User.create({
+          telegramId: mockTelegramId,
+          username: 'postman_test_user',
+          firstName: 'Postman Test',
+          role: mockRole as any,
+          isBanned: false,
+          isDeleted: false
+        });
+      } else {
+        // Update role if header is provided
+        if (mockRole && ['USER', 'ADMIN', 'SUPER_ADMIN', 'SELLER', 'BUYER'].includes(mockRole)) {
+          user.role = mockRole as any;
+          await user.save();
+        }
+      }
+
+      if (user.isBanned) {
+        const error = new Error('You are banned.') as AppError;
+        error.statusCode = 403;
+        return next(error);
+      }
+
+      req.user = user;
+      return next();
+    }
+
+    // NORMAL TELEGRAM AUTHENTICATION
     const initData = req.headers.authorization;
 
     if (!initData) {
-      res.status(401).json({ message: 'Not authorized, no token' });
-      return;
+      const error = new Error('Not authorized, no token') as AppError;
+      error.statusCode = 401;
+      return next(error);
     }
 
-    // 2. Validate Telegram Signature
     const telegramUser = validateTelegramData(initData);
 
     if (!telegramUser) {
-      res.status(401).json({ message: 'Invalid Telegram Data' });
-      return;
+      const error = new Error('Invalid Telegram Data') as AppError;
+      error.statusCode = 401;
+      return next(error);
     }
 
-    // 3. Check if User exists in our Database
-    // Since this is an Invite-Only app, if they aren't in DB, we block them.
-    let user = await User.findOne({ telegramId: telegramUser.id.toString() });
-
-    if (!user) {
-      res.status(403).json({ message: 'Access Denied. You need an invite.' });
-      return;
+    const telegramId = telegramUser.id.toString();
+    const cacheKey = CacheKeys.user(telegramId);
+    
+    // Try cache first
+    const cachedUser = cacheService.get<any>(cacheKey);
+    let user;
+    
+    if (cachedUser) {
+      // Cache hit - check if update needed
+      if (cachedUser.username !== telegramUser.username || cachedUser.firstName !== telegramUser.first_name) {
+        // Need to update - fetch fresh from DB (exclude deleted users)
+        // Use $ne: true to match both false and undefined (for existing users without the field)
+        user = await User.findOne({ telegramId, isDeleted: { $ne: true } });
+        if (user) {
+          user.username = telegramUser.username || '';
+          user.firstName = telegramUser.first_name || '';
+          await user.save();
+          cacheService.set(cacheKey, user.toObject(), 120);
+        } else {
+          // User was deleted, clear cache and deny access
+          cacheService.del(cacheKey);
+          const error = new Error('Access Denied. You need an invite.') as AppError;
+          error.statusCode = 403;
+          return next(error);
+        }
+      } else {
+        // Use cached user (convert to Mongoose-like object for req.user)
+        // Check if cached user is deleted (only deny if explicitly true)
+        if (cachedUser.isDeleted === true) {
+          cacheService.del(cacheKey);
+          const error = new Error('Access Denied. You need an invite.') as AppError;
+          error.statusCode = 403;
+          return next(error);
+        }
+        user = cachedUser;
+      }
+    } else {
+      // Cache miss - query database (exclude deleted users)
+      // Use $ne: true to match both false and undefined (for existing users without the field)
+      user = await User.findOne({ telegramId, isDeleted: { $ne: true } });
+      
+      if (!user) {
+        const error = new Error('Access Denied. You need an invite.') as AppError;
+        error.statusCode = 403;
+        return next(error);
+      }
+      
+      // Sync if needed
+      if (user.username !== telegramUser.username || user.firstName !== telegramUser.first_name) {
+        user.username = telegramUser.username || '';
+        user.firstName = telegramUser.first_name || '';
+        await user.save();
+      }
+      
+      // Cache for 2 minutes
+      cacheService.set(cacheKey, user.toObject(), 120);
     }
 
     if (user.isBanned) {
-      res.status(403).json({ message: 'You are banned.' });
-      return;
+      const error = new Error('You are banned.') as AppError;
+      error.statusCode = 403;
+      return next(error);
     }
 
-    // 4. Sync Data (Optional but recommended)
-    // If they changed their username on Telegram, update it in our DB automatically.
-    if (user.username !== telegramUser.username || user.firstName !== telegramUser.first_name) {
-      user.username = telegramUser.username || '';
-      user.firstName = telegramUser.first_name || '';
-      await user.save();
-    }
-
-    // 5. Attach to Request
     req.user = user;
     next();
 
   } catch (error) {
-    console.error(error);
-    res.status(401).json({ message: 'Not authorized, token failed' });
+    next(error);
   }
 };
-
-// import { Request, Response, NextFunction } from 'express';
-// import User, { UserRole } from '../models/User'; // Import UserRole
-
-// // TEMPORARY DEV VERSION
-// export const protect = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     // --- BYPASS START ---
-//     // For testing Day 6, we force the system to think you are the Super Admin.
-//     // validation logic is skipped.
-    
-//     // 1. Find your Super Admin User in DB
-//     // Make sure this telegramID matches what you put in your Seed script/Database
-//     const devAdminId = process.env.SUPER_ADMIN_ID; 
-    
-//     const user = await User.findOne({ telegramId: devAdminId });
-
-//     if (!user) {
-//         res.status(404).json({ message: 'Dev User not found in DB. Did you run npm run seed?' });
-//         return;
-//     }
-
-//     // 2. Attach user to request
-//     req.user = user;
-    
-//     console.log(`🔓 DEV MODE: Authenticated as ${user.username} (${user.role})`);
-//     next(); 
-//     return; 
-//     // --- BYPASS END ---
-
-//     /* 
-//     // ORIGINAL CODE (UNCOMMENT THIS WHEN MOVING TO PRODUCTION/FRONTEND)
-//     const initData = req.headers.authorization;
-//     if (!initData) {
-//       res.status(401).json({ message: 'Not authorized, no token' });
-//       return;
-//     }
-//     // ... rest of validation logic
-//     */
-
-//   } catch (error) {
-//     console.error(error);
-//     res.status(401).json({ message: 'Auth Failed' });
-//   }
-// };
-
-
-// import { Request, Response, NextFunction } from 'express';
-// import { validateTelegramData } from '../utils/validateTelegramData';
-// import User from '../models/User';
-
-// export const protect = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     // 1. Get the token (initData) from Headers
-//     const initData = req.headers.authorization;
-
-//     if (!initData) {
-//       res.status(401).json({ message: 'Not authorized, no token' });
-//       return;
-//     }
-
-//     // 2. Validate Telegram Signature
-//     const telegramUser = validateTelegramData(initData);
-
-//     if (!telegramUser) {
-//       res.status(401).json({ message: 'Invalid Telegram Data' });
-//       return;
-//     }
-
-//     // 3. Find User in DB
-//     let user = await User.findOne({ telegramId: telegramUser.id.toString() });
-
-//     if (!user) {
-//       // Allow Super Admin to bypass "Invite Only" check if they are the first user
-//       if (telegramUser.id.toString() === process.env.SUPER_ADMIN_ID) {
-//          // (Optional logic to auto-create super admin if missing, but usually we seed)
-//       } else {
-//          res.status(403).json({ message: 'Access Denied. You need an invite.' });
-//          return;
-//       }
-//     }
-
-//     // 4. Attach to Request
-//     req.user = user;
-//     next();
-
-//   } catch (error) {
-//     console.error(error);
-//     res.status(401).json({ message: 'Not authorized, token failed' });
-//   }
-// };
 

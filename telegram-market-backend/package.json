@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.ts",
+    "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
+    "get-channel-id": "ts-node src/scripts/getChannelId.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,13 +19,19 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "formidable": "^3.5.4",
     "helmet": "^8.1.0",
     "mongoose": "^8.20.0",
-    "telegraf": "^4.16.3"
+    "node-cache": "^5.1.2",
+    "telegraf": "^4.16.3",
+    "winston": "^3.18.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
+    "@types/formidable": "^3.4.6",
     "@types/node": "^24.10.1",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",

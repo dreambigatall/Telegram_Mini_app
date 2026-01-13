@@ -10,7 +10,13 @@ interface UserData {
 }
 
 export const validateTelegramData = (initData: string): UserData | null => {
-  if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN is missing');
+  if (!process.env.BOT_TOKEN) {
+    // In mock mode, this function shouldn't be called, but handle gracefully
+    if (process.env.ENABLE_MOCK_AUTH === 'true') {
+      return null;
+    }
+    throw new Error('BOT_TOKEN is missing');
+  }
 
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');

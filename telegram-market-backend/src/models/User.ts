@@ -4,6 +4,8 @@ export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   USER = 'USER', // Acts as both Buyer and Seller
+  SELLER = 'SELLER', // Can only sell (submit products)
+  BUYER = 'BUYER' // Can only buy (view feed)
 }
 
 export interface IUser extends Document {
@@ -12,6 +14,7 @@ export interface IUser extends Document {
   firstName?: string;
   role: UserRole;
   isBanned: boolean;
+  isDeleted: boolean; // Soft delete flag
   createdAt: Date;
 }
 
@@ -30,6 +33,7 @@ const UserSchema: Schema = new Schema({
     default: UserRole.USER 
   },
   isBanned: { type: Boolean, default: false },
+  isDeleted: { type: Boolean, default: false, index: true },
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt
 });

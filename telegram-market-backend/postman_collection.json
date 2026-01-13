@@ -1,0 +1,565 @@
+{
+	"info": {
+		"name": "Telegram Market Backend API",
+		"description": "API collection for testing Telegram Market Backend with mock authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000/api",
+			"type": "string"
+		},
+		{
+			"key": "mockTelegramId",
+			"value": "123456789",
+			"type": "string"
+		},
+		{
+			"key": "mockRole",
+			"value": "USER",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Submit Product - Year Only Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - Year Only\",\n  \"description\": \"Testing expiration date with year only format\",\n  \"originalPrice\": 100,\n  \"madeIn\": \"USA\",\n  \"expirationDate\": \"2026\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Submit Product - Year/Month Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - Year/Month\",\n  \"description\": \"Testing expiration date with year/month format\",\n  \"originalPrice\": 150,\n  \"madeIn\": \"China\",\n  \"expirationDate\": \"2026/01\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Submit Product - Full Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - Full Date\",\n  \"description\": \"Testing expiration date with full date format\",\n  \"originalPrice\": 200,\n  \"madeIn\": \"Germany\",\n  \"expirationDate\": \"2026/01/15\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Submit Product - ISO Date",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - ISO Date\",\n  \"description\": \"Testing expiration date with ISO format\",\n  \"originalPrice\": 250,\n  \"madeIn\": \"Japan\",\n  \"expirationDate\": \"2026-01-15T12:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Submit Product - Only MadeIn",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - Only MadeIn\",\n  \"description\": \"Testing with only madeIn field\",\n  \"originalPrice\": 350,\n  \"madeIn\": \"France\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Submit Product - No New Fields",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Product - No New Fields\",\n  \"description\": \"Testing backward compatibility\",\n  \"originalPrice\": 300\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Get Product Feed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/products/feed?page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", "feed"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Pending Products (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "ADMIN",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/products/pending?page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", "pending"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Approve Product (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "ADMIN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"finalPrice\": 150,\n  \"adminUsername\": \"@admin\",\n  \"adminPhone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products/:id/approve",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", ":id", "approve"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "PRODUCT_ID_HERE",
+									"description": "Replace with actual product ID"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Product - New Fields (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "ADMIN",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"madeIn\": \"Updated Country\",\n  \"expirationDate\": \"2027/06\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "PRODUCT_ID_HERE",
+									"description": "Replace with actual product ID"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Product (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "ADMIN",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/products/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "PRODUCT_ID_HERE",
+									"description": "Replace with actual product ID"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "me"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get All Users (Super Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "SUPER_ADMIN",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users?page=1&limit=20",
+							"host": ["{{baseUrl}}"],
+							"path": ["admin", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Validation Tests",
+			"item": [
+				{
+					"name": "Invalid Date Format",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test\",\n  \"originalPrice\": 100,\n  \"expirationDate\": \"invalid-date\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Past Date (Should Fail)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test\",\n  \"originalPrice\": 100,\n  \"expirationDate\": \"2020-01-01\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "MadeIn Too Long (Should Fail)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-mock-telegram-id",
+								"value": "{{mockTelegramId}}",
+								"type": "text"
+							},
+							{
+								"key": "x-mock-role",
+								"value": "{{mockRole}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test\",\n  \"originalPrice\": 100,\n  \"madeIn\": \"This is a very long string that exceeds the maximum allowed length of 100 characters and should fail validation\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
+
